@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Advanced CGPA Planner</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f0f2f5;
+text-align:center;
+padding:20px;
+}
+
+.container{
+background:white;
+padding:25px;
+border-radius:12px;
+width:520px;
+margin:auto;
+box-shadow:0px 0px 12px rgba(0,0,0,0.15);
+}
+
+input{
+width:80px;
+padding:6px;
+margin:4px;
+text-align:center;
+}
+
+button{
+padding:10px 18px;
+margin:5px;
+border:none;
+background:#4CAF50;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+background:#43a047;
+}
+
+.progress{
+height:20px;
+background:#ddd;
+border-radius:10px;
+margin-top:15px;
+}
+
+.progress-bar{
+height:100%;
+width:0%;
+background:#4CAF50;
+border-radius:10px;
+}
+
+.result{
+margin-top:10px;
+font-weight:bold;
+}
+
+canvas{
+margin-top:20px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Advanced CGPA Planner</h2>
+
+<div id="semesters"></div>
+
+<br>
+
+Target CGPA
+<input type="number" step="0.01" id="target">
+
+<br><br>
+
+<button onclick="calculate()">Calculate</button>
+<button onclick="simulate()">Simulate Next Semester</button>
+<button onclick="downloadPDF()">Export PDF</button>
+
+<br>
+
+Next Sem SGPA
+<input type="number" step="0.01" id="simulateValue">
+
+<div class="result" id="current"></div>
+<div class="result" id="next"></div>
+<div class="result" id="remaining"></div>
+<div class="result" id="maximum"></div>
+<div class="result" id="strategy"></div>
+<div class="result" id="status"></div>
+
+<div class="progress">
+<div class="progress-bar" id="bar"></div>
+</div>
+
+<canvas id="cgpaChart"></canvas>
+
+</div>
+
+<script>
+
+const credits=[19.5,22.5,20,21,26,18,16,17];
+
+const semesterDiv=document.getElementById("semesters");
+
+for(let i=1;i<=8;i++)
+{
+semesterDiv.innerHTML+=`Semester ${i} :
+<input type="number" step="0.01" id="s${i}"><br>`;
+}
+
+let chart;
+
+function calculate(){
+
+let total=0;
+let creditSum=0;
+let completed=0;
+let remainingCredits=0;
+
+let sgpaList=[];
+
+for(let i=1;i<=8;i++)
+{
+let val=document.getElementById("s"+i).value;
+
+if(val!=="")
+{
+let sg=parseFloat(val);
+
+if(sg<0||sg>10)
+{
+alert("SGPA must be 0-10");
+return;
+}
+
+total+=sg*credits[i-1];
+creditSum+=credits[i-1];
+completed++;
+
+sgpaList.push(sg);
+}
+else
+{
+remainingCredits+=credits[i-1];
+sgpaList.push(null);
+}
+}
+
+if(creditSum===0)
+{
+alert("Enter at least one semester");
+return;
+}
+
+let cgpa=total/creditSum;
+
+document.getElementById("current").innerText="Current CGPA : "+cgpa.toFixed(2);
+
+let target=parseFloat(document.getElementById("target").value);
+
+if(target)
+{
+
+let totalCredits=credits.reduce((a,b)=>a+b,0);
+
+let requiredTotal=target*totalCredits;
+
+let remainingPoints=requiredTotal-total;
+
+let avgRequired=remainingPoints/remainingCredits;
+
+document.getElementById("remaining").innerText=
+"Average SGPA needed in remaining semesters : "+avgRequired.toFixed(2);
+
+let nextNeeded=(target*(creditSum+credits[completed])-total)/credits[completed];
+
+document.getElementById("next").innerText=
+"SGPA needed in next semester : "+nextNeeded.toFixed(2);
+
+let maxCGPA=(total+remainingCredits*10)/(creditSum+remainingCredits);
+
+document.getElementById("maximum").innerText=
+"Maximum CGPA achievable : "+maxCGPA.toFixed(2);
+
+if(avgRequired>10)
+document.getElementById("status").innerText="Target impossible";
+else
+document.getElementById("status").innerText="Target achievable";
+
+generateStrategy(avgRequired);
+
+let progress=(cgpa/target)*100;
+
+if(progress>100) progress=100;
+
+document.getElementById("bar").style.width=progress+"%";
+
+}
+
+drawChart(sgpaList);
+
+}
+
+function generateStrategy(avg){
+
+if(avg>10||avg<0)
+{
+document.getElementById("strategy").innerText="";
+return;
+}
+
+let text="Suggested SGPA strategy : ";
+
+for(let i=1;i<=8;i++)
+{
+if(document.getElementById("s"+i).value==="")
+{
+text+=avg.toFixed(2)+" ";
+}
+}
+
+document.getElementById("strategy").innerText=text;
+
+}
+
+function simulate(){
+
+let val=parseFloat(document.getElementById("simulateValue").value);
+
+if(!val) return;
+
+for(let i=1;i<=8;i++)
+{
+if(document.getElementById("s"+i).value==="")
+{
+document.getElementById("s"+i).value=val;
+break;
+}
+}
+
+calculate();
+
+}
+
+function drawChart(data){
+
+let labels=["Sem1","Sem2","Sem3","Sem4","Sem5","Sem6","Sem7","Sem8"];
+
+if(chart) chart.destroy();
+
+chart=new Chart(document.getElementById("cgpaChart"),{
+
+type:"line",
+
+data:{
+labels:labels,
+datasets:[{
+label:"SGPA Progress",
+data:data,
+fill:false,
+borderWidth:2
+}]
+}
+
+});
+
+}
+
+function downloadPDF(){
+
+const {jsPDF}=window.jspdf;
+
+let doc=new jsPDF();
+
+doc.text("CGPA Planner Report",20,20);
+
+doc.text(document.getElementById("current").innerText,20,40);
+doc.text(document.getElementById("next").innerText,20,50);
+doc.text(document.getElementById("remaining").innerText,20,60);
+doc.text(document.getElementById("maximum").innerText,20,70);
+doc.text(document.getElementById("status").innerText,20,80);
+
+doc.save("cgpa_plan.pdf");
+
+}
+
+</script>
+
+</body>
+</html>
