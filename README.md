@@ -2,6 +2,8 @@
 
 A feature-rich, dark-themed academic planner built specifically for **B.Tech CSE students at Jaypee University of Engineering and Technology (JUET), Guna**. Track your SGPA semester by semester, calculate your live CGPA, simulate future outcomes, and store everything securely in the cloud with real Firebase authentication.
 
+🔗 **Live Demo:** [https://abhinav128914122.github.io/smart_cgpa_calculator/](https://abhinav128914122.github.io/smart_cgpa_calculator/)
+
 ---
 
 ## ✨ Features
@@ -20,6 +22,7 @@ A feature-rich, dark-themed academic planner built specifically for **B.Tech CSE
 - Activity log tracks your last 10 saves, exports and account changes
 
 ### 📝 Two Grade Entry Modes
+
 | Mode | How it works |
 |---|---|
 | **Quick SGPA** | Type one SGPA per semester directly — fastest way to enter data |
@@ -30,15 +33,15 @@ A feature-rich, dark-themed academic planner built specifically for **B.Tech CSE
 - **CGPA Trajectory** — running CGPA with optional target line overlay
 - **Credits Progress** — cumulative credits earned vs total 160
 - **Semester Breakdown** — color-coded bar chart (cyan = O, green = A, amber = B+, red = below)
-- **Insights panel** — avg SGPA, range, trend direction (improving/declining/stable), equivalent %
+- **Insights panel** — avg SGPA, range, trend direction (improving / declining / stable), equivalent %
 
 ### 🎯 Target CGPA Planner
 - Set a target CGPA and instantly see:
   - Average SGPA needed across all remaining semesters
-  - Exact SGPA needed in the next semester
+  - Exact SGPA needed in the very next semester
   - Maximum CGPA still achievable
   - Whether target is achievable, needs effort, or is no longer possible
-  - Progress bar showing how far along you are
+  - Progress bar showing how close you are
   - Per-semester suggested SGPA strategy
 
 ### 🔮 What-If Scenario Planner
@@ -47,15 +50,15 @@ A feature-rich, dark-themed academic planner built specifically for **B.Tech CSE
 - Auto-fill all remaining semesters with one click
 
 ### 📄 PDF Export
-- Export a professional dark-themed report with:
+- Export a professional dark-themed academic report containing:
   - Your name and enrollment number in the header
-  - CGPA, max achievable, division summary boxes
+  - CGPA, max achievable, and division summary
   - Full semester-wise performance table with grade points and percentages
-  - Target analysis section (if target is set)
+  - Target analysis section (if a target is set)
 
 ### 📖 Reference Tab
-- Complete grade point scale (O to F)
-- Division / classification table
+- Complete grade point scale (O to F) with marks range
+- Division and classification table
 - Percentage formula: `Percentage = CGPA × 10`
 - Full JUET CSE credit structure — all 8 semesters, all subjects with codes and credits
 
@@ -75,7 +78,7 @@ The app uses the **official JUET CSE B.Tech curriculum** with exact subject name
 | Sem 6 | 18 | Operating Systems, Compiler Design, Minor Project-2 |
 | Sem 7 | 16 | CS Electives (×4), Major Project Part-I |
 | Sem 8 | 17 | CS Electives (×2), Open Elective, Major Project Part-II |
-| **Total** | **160** | *(Audit/Value Added courses excluded from CGPA as per university rules)* |
+| **Total** | **160** | *(Audit / Value Added courses excluded from CGPA as per university rules)* |
 
 ---
 
@@ -83,14 +86,14 @@ The app uses the **official JUET CSE B.Tech curriculum** with exact subject name
 
 | Technology | Purpose |
 |---|---|
-| **HTML / CSS / JavaScript** | Single-file frontend, no build tools needed |
+| **HTML / CSS / JavaScript** | Single-file frontend — no build tools needed |
 | **Firebase Authentication** | Real user accounts and secure login |
-| **Cloud Firestore** | Real-time database for storing academic data |
+| **Cloud Firestore** | Real-time NoSQL database for storing academic data |
 | **Chart.js** | Interactive performance charts |
 | **jsPDF** | Client-side PDF report generation |
 | **Google Fonts** | Space Mono + DM Sans typography |
 
-> No Node.js, no npm, no build step. The entire app is one `.html` file.
+> No Node.js. No npm. No build step. The entire app is one `.html` file.
 
 ---
 
@@ -101,8 +104,8 @@ The app uses the **official JUET CSE B.Tech curriculum** with exact subject name
 
 ### Step 1 — Clone the repository
 ```bash
-git clone https://github.com/your-username/cgpa-planner-pro.git
-cd cgpa-planner-pro
+git clone https://github.com/abhinav128914122/smart_cgpa_calculator.git
+cd smart_cgpa_calculator
 ```
 
 ### Step 2 — Create a Firebase project
@@ -123,7 +126,7 @@ cd cgpa-planner-pro
 3. Select **"Use a `<script>` tag"** — copy the `firebaseConfig` object
 
 ### Step 6 — Add your config to the file
-Open `cgpa_planner.html` and find this section near the bottom:
+Open `cgpa_planner.html` and find this section:
 
 ```javascript
 const firebaseConfig = {
@@ -136,7 +139,7 @@ const firebaseConfig = {
 };
 ```
 
-Replace with your own values from the Firebase console.
+Replace the values with your own from the Firebase console.
 
 ### Step 7 — Set Firestore Security Rules
 In Firebase Console → **Firestore Database** → **Rules** tab, replace the default rules with:
@@ -159,7 +162,7 @@ Click **Publish**. This ensures every user can only access their own data.
 
 ### Step 8 — Open in browser
 ```bash
-# Just open the file directly — no server needed
+# No server needed — just open the file directly
 open cgpa_planner.html
 ```
 
@@ -167,10 +170,20 @@ Or deploy to **GitHub Pages**, **Netlify**, **Vercel**, or any static host — i
 
 ---
 
+## 🌐 Deploying to GitHub Pages
+
+1. Push the repo to GitHub
+2. Go to your repo → **Settings** → **Pages**
+3. Under **Source** → select **main branch** → `/ (root)` → click **Save**
+4. Your app will be live at:
+   `https://abhinav128914122.github.io/smart_cgpa_calculator/`
+
+---
+
 ## 📁 Project Structure
 
 ```
-cgpa-planner-pro/
+smart_cgpa_calculator/
 │
 ├── cgpa_planner.html     # The entire application (single file)
 └── README.md             # This file
@@ -178,28 +191,18 @@ cgpa-planner-pro/
 
 ---
 
-## 🌐 Deploying to GitHub Pages
-
-1. Push the repo to GitHub
-2. Go to **Settings** → **Pages**
-3. Under **Source** → select **main branch** → `/ (root)`
-4. Click **Save** — your app will be live at `https://your-username.github.io/cgpa-planner-pro/cgpa_planner.html`
-
----
-
-
 ## 🔒 Security Notes
 
 - Passwords are **hashed by Firebase** using industry-standard bcrypt — never stored as plain text
 - Each user's Firestore documents are **protected by security rules** — only the authenticated owner can read or write their data
-- Firebase API keys in the frontend are safe to be public — they identify your project but don't grant admin access
-- For production use, restrict your API key in the [Google Cloud Console](https://console.cloud.google.com) to only allow requests from your domain
+- Firebase API keys in the frontend are safe to be public — they identify your project but do not grant admin access
+- For production, restrict your API key in [Google Cloud Console](https://console.cloud.google.com) to only allow requests from your domain
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you're a JUET student and notice any subject name, code, or credit mismatch with the latest curriculum, please open an issue or pull request.
+Contributions are welcome! If you notice any subject name, course code, or credit value that doesn't match the latest JUET CSE curriculum, please open an issue or submit a pull request.
 
 ```bash
 # Fork the repo, make your changes, then open a PR
@@ -218,10 +221,13 @@ MIT License — free to use, modify and distribute.
 
 ## 👨‍💻 Author
 
-Built with ❤️ by Abhinav, for JUET CSE students.
+**Abhinav**
+B.Tech CSE — Jaypee University of Engineering and Technology, Guna
 
-> *"Your CGPA doesn't define you, but this planner definitely helps it."*
+Built with ❤️ for JUET CSE students.
+
+> *"Your CGPA doesn't define you — but this planner definitely helps it."*
 
 ---
 
-## ⭐ Star this repo if it helped you!
+⭐ **Star this repo if it helped you!**
