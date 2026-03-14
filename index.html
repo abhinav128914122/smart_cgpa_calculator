@@ -5,8 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CGPA Planner Pro — JUET CSE</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- Firebase Compat SDK (global scope, no ES modules needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<!-- Chart.js & jsPDF -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 :root{
   --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--surface3:#21262d;
@@ -20,40 +28,35 @@
 body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-height:100vh;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
 
-/* ── LOADING SCREEN ── */
+/* LOADING */
 #loading-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
-.loader-ring{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite;}
+.loader-ring{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loader-text{font-family:var(--font-mono);font-size:12px;color:var(--text-muted);letter-spacing:2px;}
 
-/* ── AUTH SCREEN ── */
+/* AUTH */
 #auth-screen{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:16px;background:var(--bg);}
 .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:420px;position:relative;}
 .auth-box::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);border-radius:2px;}
 .auth-logo{text-align:center;margin-bottom:28px;}
-.auth-logo h1{font-size:24px;font-weight:700;letter-spacing:-0.5px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-logo h1{font-size:24px;font-weight:700;letter-spacing:-.5px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .auth-logo p{font-size:12px;color:var(--text-muted);margin-top:6px;}
 .auth-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;margin-bottom:24px;}
 .auth-tab{flex:1;padding:8px;border:none;background:transparent;color:var(--text-muted);font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;transition:all .2s;font-family:var(--font-sans);}
 .auth-tab.active{background:var(--surface3);color:var(--cyan);}
 .auth-field{margin-bottom:16px;}
 .auth-field label{display:block;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
-.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-sans);font-size:14px;padding:10px 14px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-sans);font-size:14px;padding:10px 14px;outline:none;transition:border-color .2s;}
 .auth-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
-.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--cyan);color:#000;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--font-sans);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--cyan);color:#000;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--font-sans);margin-top:4px;}
 .auth-btn:hover:not(:disabled){background:var(--cyan-dim);transform:translateY(-1px);}
 .auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
 .auth-err{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:10px;display:none;}
 .auth-err.show{display:block;}
-.auth-success{background:rgba(57,211,83,.1);border:1px solid rgba(57,211,83,.3);color:var(--green);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:10px;display:none;}
-.auth-success.show{display:block;}
-.auth-divider{text-align:center;color:var(--text-dim);font-size:12px;margin:12px 0;position:relative;}
-.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
-.auth-divider::before{left:0;}.auth-divider::after{right:0;}
-.forgot-link{font-size:12px;color:var(--cyan);cursor:pointer;text-align:right;display:block;margin-top:-10px;margin-bottom:14px;}
-.forgot-link:hover{text-decoration:underline;}
+.auth-ok{background:rgba(57,211,83,.1);border:1px solid rgba(57,211,83,.3);color:var(--green);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:10px;display:none;}
+.auth-ok.show{display:block;}
 
-/* ── TOP NAV ── */
+/* TOP NAV */
 #app-screen{display:none;min-height:100vh;padding-bottom:60px;}
 .topnav{position:sticky;top:0;z-index:50;background:rgba(13,17,23,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
 .topnav-brand{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--cyan);}
@@ -69,7 +72,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;}
 .user-name{font-size:12px;color:var(--text);font-weight:500;}
 
-/* ── PROFILE DROPDOWN ── */
+/* DROPDOWN */
 .profile-dropdown{position:fixed;top:54px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;min-width:230px;z-index:200;display:none;box-shadow:0 8px 32px rgba(0,0,0,.5);}
 .profile-dropdown.open{display:block;}
 .pd-header{padding:10px 12px 12px;border-bottom:1px solid var(--border);margin-bottom:6px;}
@@ -79,17 +82,17 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .pd-item:hover{background:var(--surface2);color:var(--text);}
 .pd-item.danger:hover{background:rgba(248,81,73,.1);color:var(--red);}
 
-/* ── APP SHELL ── */
+/* APP */
 .app-shell{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:24px 16px;}
 .header{text-align:center;margin-bottom:28px;}
 .header-badge{display:inline-block;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--cyan);font-family:var(--font-mono);font-size:11px;letter-spacing:2px;padding:4px 14px;border-radius:20px;margin-bottom:10px;}
 .header h2{font-size:clamp(22px,4vw,34px);font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 
-/* ── STAT CARDS ── */
+/* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
 @media(max-width:640px){.stats-row{grid-template-columns:repeat(2,1fr);}}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;}
-.stat-card:hover{border-color:#00b8cc;transform:translateY(-2px);}
+.stat-card:hover{border-color:var(--cyan-dim);transform:translateY(-2px);}
 .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s;}
 .stat-card:hover::after{opacity:1;}
 .stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-mono);margin-bottom:8px;}
@@ -97,7 +100,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .stat-value.good{color:var(--green);}.stat-value.warn{color:var(--amber);}.stat-value.bad{color:var(--red);}
 .stat-sub{font-size:11px;color:var(--text-dim);margin-top:4px;}
 
-/* ── TABS ── */
+/* TABS */
 .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:20px;flex-wrap:wrap;}
 .tab-btn{flex:1;padding:9px 12px;border:none;background:transparent;color:var(--text-muted);font-family:var(--font-sans);font-size:13px;font-weight:500;border-radius:var(--radius-sm);cursor:pointer;transition:all .2s;white-space:nowrap;}
 .tab-btn.active{background:var(--surface3);color:var(--cyan);box-shadow:0 0 20px rgba(0,229,255,.15);}
@@ -105,14 +108,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .tab-panel{display:none;animation:fadeIn .3s ease;}
 .tab-panel.active{display:block;}
 
-/* ── ENTRY MODE ── */
+/* MODE BAR */
 .entry-mode-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;flex-wrap:wrap;}
 .entry-mode-bar span{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);}
 .mode-toggle{display:flex;background:var(--surface3);border-radius:6px;padding:3px;gap:3px;margin-left:auto;}
 .mode-btn{padding:5px 14px;border:none;border-radius:4px;background:transparent;color:var(--text-muted);font-size:12px;font-family:var(--font-mono);cursor:pointer;transition:all .2s;}
 .mode-btn.active{background:var(--cyan);color:#000;font-weight:700;}
 
-/* ── SEM CARDS ── */
+/* SEM CARDS */
 .sem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px;}
 @media(max-width:600px){.sem-grid{grid-template-columns:1fr;}}
 .sem-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s;}
@@ -127,9 +130,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .sem-body{max-height:0;overflow:hidden;transition:max-height .4s ease;}
 .sem-card.open .sem-body{max-height:900px;}
 .sem-body-inner{padding:16px;}
+
+/* INPUTS */
 .quick-sgpa-wrap{display:flex;align-items:center;gap:12px;padding:8px 0;}
 .quick-sgpa-wrap label{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);white-space:nowrap;}
-.quick-inp{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:var(--font-mono);font-size:20px;font-weight:700;padding:8px 12px;width:120px;text-align:center;outline:none;transition:border-color .2s,box-shadow .2s;}
+.quick-inp{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:var(--font-mono);font-size:20px;font-weight:700;padding:8px 12px;width:130px;text-align:center;outline:none;transition:border-color .2s;}
 .quick-inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
 .quick-subjects{margin-top:10px;display:flex;flex-direction:column;gap:4px;}
 .quick-subject-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:4px;background:var(--surface2);}
@@ -152,7 +157,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .clear-btn:hover{color:var(--red);}
 .audit-note{font-size:10px;color:var(--text-dim);margin-top:8px;padding:5px 8px;border-left:2px solid var(--border);font-style:italic;}
 
-/* ── CONTROLS ── */
+/* CONTROLS */
 .controls-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
 .controls-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;}
 .controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -170,13 +175,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .btn-danger{background:transparent;color:var(--red);border:1px solid rgba(248,81,73,.3);}
 .btn-danger:hover{background:rgba(248,81,73,.1);}
 
-/* ── PROGRESS ── */
+/* PROGRESS */
 .progress-section{margin-bottom:20px;}
 .progress-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px;}
 .progress-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
 .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1);}
 
-/* ── RESULT BOX ── */
+/* RESULT */
 .result-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
 .result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
 @media(max-width:500px){.result-grid{grid-template-columns:1fr;}}
@@ -188,18 +193,18 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .status-banner.warning{background:rgba(227,179,65,.1);border:1px solid rgba(227,179,65,.3);color:var(--amber);}
 .status-banner.impossible{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red);}
 
-/* ── CHARTS ── */
+/* CHARTS */
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
 .chart-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;}
 .chart-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
 .chart-tab{padding:4px 12px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-family:var(--font-mono);transition:all .2s;}
 .chart-tab.active{background:rgba(0,229,255,.1);border-color:var(--cyan);color:var(--cyan);}
 
-/* ── WHAT-IF ── */
+/* WHAT-IF */
 .whatif-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
 .scenarios-list{display:flex;flex-direction:column;gap:10px;}
 .scenario-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;}
-.scenario-row.result-row-scenario{background:rgba(0,229,255,.04);border-color:rgba(0,229,255,.2);}
+.scenario-row.result-row{background:rgba(0,229,255,.04);border-color:rgba(0,229,255,.2);}
 .s-label{color:var(--text-muted);font-size:11px;font-family:var(--font-mono);}
 .s-val{font-family:var(--font-mono);font-weight:700;color:var(--cyan);}
 .s-cgpa{font-family:var(--font-mono);font-weight:700;font-size:16px;}
@@ -207,7 +212,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .del-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);width:28px;height:28px;cursor:pointer;font-size:14px;transition:all .2s;display:flex;align-items:center;justify-content:center;}
 .del-btn:hover{border-color:var(--red);color:var(--red);}
 
-/* ── PROFILE TAB ── */
+/* PROFILE */
 .profile-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;text-align:center;}
 .profile-avatar-large{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#000;margin:0 auto 16px;}
 .profile-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;text-align:left;}
@@ -217,34 +222,33 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .activity-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:6px;padding:8px 12px;font-size:12px;}
 .activity-time{color:var(--text-dim);font-family:var(--font-mono);font-size:11px;}
 
-/* ── GRADE TABLE ── */
+/* GRADE TABLE */
 .grade-ref-table{width:100%;border-collapse:collapse;font-size:13px;}
 .grade-ref-table th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--font-mono);letter-spacing:1px;color:var(--text-muted);border-bottom:1px solid var(--border);text-transform:uppercase;}
 .grade-ref-table td{padding:8px 12px;border-bottom:1px solid rgba(48,54,61,.5);font-family:var(--font-mono);}
 .grade-ref-table tr:hover td{background:var(--surface2);}
 
-/* ── RANK BADGE ── */
+/* RANK */
 .rank-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--font-mono);font-weight:700;letter-spacing:1px;}
 .rank-O{background:rgba(0,229,255,.15);color:var(--cyan);border:1px solid rgba(0,229,255,.3);}
 .rank-A{background:rgba(57,211,83,.15);color:var(--green);border:1px solid rgba(57,211,83,.3);}
 .rank-B{background:rgba(227,179,65,.15);color:var(--amber);border:1px solid rgba(227,179,65,.3);}
 .rank-C{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3);}
 
-/* ── MODAL ── */
+/* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:400px;}
 .modal h3{font-size:16px;font-weight:700;margin-bottom:16px;}
 .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end;}
 
-/* ── TOAST ── */
+/* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;max-width:300px;}
 .toast.show{transform:translateY(0);opacity:1;}
 .toast.success{border-color:rgba(57,211,83,.4);color:var(--green);}
 .toast.error{border-color:rgba(248,81,73,.4);color:var(--red);}
 .toast.info{border-color:rgba(0,229,255,.3);color:var(--cyan);}
 
-/* ── MISC ── */
 .divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
 .empty-state{text-align:center;padding:30px;color:var(--text-dim);font-size:13px;}
 .empty-state span{font-size:32px;display:block;margin-bottom:8px;}
@@ -260,10 +264,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- LOADING -->
 <div id="loading-screen">
   <div class="loader-ring"></div>
-  <div class="loader-text">CONNECTING TO DATABASE...</div>
+  <div class="loader-text">CONNECTING...</div>
 </div>
 
-<!-- AUTH SCREEN -->
+<!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-box">
     <div class="auth-logo">
@@ -275,43 +279,34 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <button class="auth-tab" onclick="showAuthTab('register')">Create Account</button>
       <button class="auth-tab" onclick="showAuthTab('reset')">Forgot Password</button>
     </div>
-
     <!-- LOGIN -->
     <div id="auth-login">
-      <div class="auth-field"><label>Email Address</label><input class="auth-input" id="login-email" type="email" placeholder="you@example.com" autocomplete="email"/></div>
-      <div class="auth-field"><label>Password</label><input class="auth-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
-      <button class="auth-btn" id="login-btn" onclick="doLogin()">
-        <span id="login-btn-text">Sign In →</span>
-      </button>
+      <div class="auth-field"><label>Email</label><input class="auth-input" id="login-email" type="email" placeholder="you@example.com"/></div>
+      <div class="auth-field"><label>Password</label><input class="auth-input" id="login-pass" type="password" placeholder="••••••••"/></div>
+      <button class="auth-btn" id="login-btn" onclick="doLogin()">Sign In →</button>
       <div class="auth-err" id="login-err"></div>
     </div>
-
     <!-- REGISTER -->
     <div id="auth-register" style="display:none">
       <div class="auth-field"><label>Full Name</label><input class="auth-input" id="reg-name" type="text" placeholder="Abhinav Kumar"/></div>
-      <div class="auth-field"><label>Email Address</label><input class="auth-input" id="reg-email" type="email" placeholder="you@juet.ac.in" autocomplete="email"/></div>
-      <div class="auth-field"><label>Enrollment No.</label><input class="auth-input" id="reg-enroll" type="text" placeholder="e.g. 0901CS211001"/></div>
-      <div class="auth-field"><label>Password (min 6 chars)</label><input class="auth-input" id="reg-pass" type="password" placeholder="••••••••" autocomplete="new-password"/></div>
-      <button class="auth-btn" id="reg-btn" onclick="doRegister()">
-        <span id="reg-btn-text">Create Account →</span>
-      </button>
+      <div class="auth-field"><label>Email</label><input class="auth-input" id="reg-email" type="email" placeholder="you@juet.ac.in"/></div>
+      <div class="auth-field"><label>Enrollment No.</label><input class="auth-input" id="reg-enroll" type="text" placeholder="0901CS211001"/></div>
+      <div class="auth-field"><label>Password (min 6 chars)</label><input class="auth-input" id="reg-pass" type="password" placeholder="••••••••"/></div>
+      <button class="auth-btn" id="reg-btn" onclick="doRegister()">Create Account →</button>
       <div class="auth-err" id="reg-err"></div>
     </div>
-
     <!-- FORGOT PASSWORD -->
     <div id="auth-reset" style="display:none">
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Enter your email and we'll send a password reset link.</p>
-      <div class="auth-field"><label>Email Address</label><input class="auth-input" id="reset-email" type="email" placeholder="you@example.com"/></div>
-      <button class="auth-btn" id="reset-btn" onclick="doPasswordReset()">
-        <span id="reset-btn-text">Send Reset Email →</span>
-      </button>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Enter your email to receive a password reset link.</p>
+      <div class="auth-field"><label>Email</label><input class="auth-input" id="reset-email" type="email" placeholder="you@example.com"/></div>
+      <button class="auth-btn" id="reset-btn" onclick="doPasswordReset()">Send Reset Email →</button>
       <div class="auth-err" id="reset-err"></div>
-      <div class="auth-success" id="reset-success"></div>
+      <div class="auth-ok" id="reset-ok"></div>
     </div>
   </div>
 </div>
 
-<!-- APP SCREEN -->
+<!-- APP -->
 <div id="app-screen">
   <nav class="topnav">
     <div class="topnav-brand">CGPA Planner <span>Pro</span></div>
@@ -323,13 +318,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
   </nav>
-
-  <!-- Profile Dropdown -->
   <div class="profile-dropdown" id="profileDropdown">
-    <div class="pd-header">
-      <div class="pd-name" id="pd-name">–</div>
-      <div class="pd-email" id="pd-email">–</div>
-    </div>
+    <div class="pd-header"><div class="pd-name" id="pd-name">–</div><div class="pd-email" id="pd-email">–</div></div>
     <div class="pd-item" onclick="switchTab('profile');closeDropdown()">👤 My Profile</div>
     <div class="pd-item" onclick="exportPDF();closeDropdown()">📄 Export PDF</div>
     <div class="pd-item" onclick="openModal('modal-chpass')">🔑 Change Password</div>
@@ -357,7 +347,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <button class="tab-btn" onclick="switchTab('profile')">👤 Profile</button>
     </div>
 
-    <!-- GRADE ENTRY -->
+    <!-- GRADES TAB -->
     <div class="tab-panel active" id="tab-entry">
       <div class="entry-mode-bar">
         <span>📋 Mode:</span>
@@ -377,7 +367,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
           <button class="btn btn-primary pulse" onclick="calculate()">⚡ Calculate</button>
           <button class="btn btn-secondary" onclick="simulateNext()">🔮 Simulate</button>
           <button class="btn btn-secondary" onclick="exportPDF()">📄 PDF</button>
-          <button class="btn btn-secondary" onclick="saveData()">💾 Save Now</button>
+          <button class="btn btn-secondary" onclick="saveData(false)">💾 Save Now</button>
           <button class="btn btn-ghost" onclick="openModal('modal-reset-data')">↺ Reset</button>
         </div>
       </div>
@@ -403,7 +393,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
-    <!-- ANALYSIS -->
+    <!-- ANALYSIS TAB -->
     <div class="tab-panel" id="tab-analysis">
       <div class="chart-card">
         <div class="chart-title">📈 Performance Chart</div>
@@ -424,7 +414,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
-    <!-- WHAT-IF -->
+    <!-- WHAT-IF TAB -->
     <div class="tab-panel" id="tab-whatif">
       <div class="whatif-section">
         <div class="controls-title">🔮 What-If Scenario Planner</div>
@@ -439,7 +429,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
-    <!-- REFERENCE -->
+    <!-- REFERENCE TAB -->
     <div class="tab-panel" id="tab-reference">
       <div class="result-box">
         <div class="controls-title">📖 Grade Point Reference</div>
@@ -466,7 +456,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
-    <!-- PROFILE -->
+    <!-- PROFILE TAB -->
     <div class="tab-panel" id="tab-profile">
       <div class="profile-section">
         <div class="profile-avatar-large" id="profile-avatar-large">?</div>
@@ -495,7 +485,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
   </div>
-  <div class="footer">CGPA Planner Pro · JUET Guna · CSE B.Tech · 160 Credits · Powered by Firebase</div>
+  <div class="footer">CGPA Planner Pro · JUET Guna · CSE B.Tech · 160 Credits · Powered by Firebase 🔥</div>
 </div>
 
 <!-- MODALS -->
@@ -503,7 +493,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="modal">
     <h3>🔑 Change Password</h3>
     <div class="auth-field"><label>New Password</label><input class="auth-input" id="cp-new" type="password" placeholder="New password (min 6 chars)"/></div>
-    <div class="auth-field"><label>Confirm New Password</label><input class="auth-input" id="cp-confirm" type="password" placeholder="Repeat new password"/></div>
+    <div class="auth-field"><label>Confirm Password</label><input class="auth-input" id="cp-confirm" type="password" placeholder="Repeat password"/></div>
     <div class="auth-err" id="cp-err"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-chpass')">Cancel</button>
@@ -511,22 +501,20 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
   </div>
 </div>
-
 <div class="modal-overlay" id="modal-reset-data">
   <div class="modal">
     <h3>↺ Reset All Grades?</h3>
-    <p style="font-size:13px;color:var(--text-muted);">This clears all semester grades. Your account stays intact.</p>
+    <p style="font-size:13px;color:var(--text-muted);">Clears all semester data. Your account stays intact.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-reset-data')">Cancel</button>
       <button class="btn btn-danger" onclick="doResetData()">Reset →</button>
     </div>
   </div>
 </div>
-
 <div class="modal-overlay" id="modal-del-account">
   <div class="modal">
     <h3>🗑 Delete Account?</h3>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Permanently deletes your account and all data. Cannot be undone.</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Permanently deletes your account and all data.</p>
     <div class="auth-field"><label>Enter your password to confirm</label><input class="auth-input" id="del-pass" type="password" placeholder="Your password"/></div>
     <div class="auth-err" id="del-err"></div>
     <div class="modal-actions">
@@ -538,37 +526,26 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 <div class="toast" id="toast"></div>
 
-<!-- ══════════════════════════════════════════
-     FIREBASE + APP SCRIPT
-══════════════════════════════════════════ -->
-<script type="module">
-import { initializeApp }                              from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword,
-         signInWithEmailAndPassword, signOut,
-         onAuthStateChanged, updatePassword,
-         reauthenticateWithCredential, EmailAuthProvider,
-         deleteUser, sendPasswordResetEmail }          from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc,
-         updateDoc, deleteDoc, serverTimestamp,
-         arrayUnion }                                  from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-
-// ── CONFIG ──────────────────────────────────
+<!-- ═══════════════════════════════════════════
+     ALL JAVASCRIPT — plain <script>, global scope
+     Firebase compat SDK gives us window.firebase
+════════════════════════════════════════════ -->
+<script>
+// ── FIREBASE INIT ────────────────────────────
 const firebaseConfig = {
   apiKey:            "AIzaSyDJNJH6regqDbEAbE1klsSHjahSqQM4LCo",
   authDomain:        "smart-cgpa-calculator-53af2.firebaseapp.com",
   projectId:         "smart-cgpa-calculator-53af2",
   storageBucket:     "smart-cgpa-calculator-53af2.firebasestorage.app",
   messagingSenderId: "718638419188",
-  appId:             "1:718638419188:web:59b034258f8df68ed7e2a1",
-  measurementId:     "G-MYR2KQHZGD"
+  appId:             "1:718638419188:web:59b034258f8df68ed7e2a1"
 };
+firebase.initializeApp(firebaseConfig);
+var auth = firebase.auth();
+var db   = firebase.firestore();
 
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
-
-// ── CURRICULUM ──────────────────────────────
-const CURRICULUM = [
+// ── CURRICULUM ───────────────────────────────
+var CURRICULUM = [
   {sem:1,credits:19.5,subjects:[
     {code:'MA101',name:'Engineering Mathematics',credits:4},
     {code:'PH101',name:'Engineering Physics-1',credits:4},
@@ -576,7 +553,7 @@ const CURRICULUM = [
     {code:'CS101',name:'Computer Programming',credits:4},
     {code:'PH201',name:'Engineering Physics Lab-1',credits:1},
     {code:'CS201',name:'Computer Programming Lab',credits:2},
-    {code:'ME201',name:'Workshop Practices',credits:1.5},
+    {code:'ME201',name:'Workshop Practices',credits:1.5}
   ]},
   {sem:2,credits:22.5,subjects:[
     {code:'HS104',name:'Life Skills and Effective Communication',credits:2},
@@ -587,7 +564,7 @@ const CURRICULUM = [
     {code:'PH202',name:'Engineering Physics Lab-2',credits:1},
     {code:'EC201',name:'Electrical Science Lab',credits:1},
     {code:'CS202',name:'OOP Lab',credits:1},
-    {code:'ME202',name:'Engineering Drawing and Design Lab',credits:1.5},
+    {code:'ME202',name:'Engineering Drawing and Design Lab',credits:1.5}
   ]},
   {sem:3,credits:20,subjects:[
     {code:'HS103',name:'Techniques for Decision Making',credits:3},
@@ -598,7 +575,7 @@ const CURRICULUM = [
     {code:'EC206',name:'Digital Systems & Microprocessors Lab',credits:1},
     {code:'CS204',name:'Database Systems Lab',credits:1},
     {code:'CS205',name:'UI/UX Lab',credits:1},
-    {code:'CS206',name:'Advanced Programming Lab-I',credits:1},
+    {code:'CS206',name:'Advanced Programming Lab-I',credits:1}
   ]},
   {sem:4,credits:21,subjects:[
     {code:'HSS',name:'HSS Elective-1',credits:3},
@@ -609,7 +586,7 @@ const CURRICULUM = [
     {code:'CS207',name:'Algorithms Lab',credits:1},
     {code:'CS208',name:'Computer Organisation & Architecture Lab',credits:1},
     {code:'CS209',name:'Machine Learning Lab',credits:1},
-    {code:'CS210',name:'Mobile Application Development Lab',credits:1},
+    {code:'CS210',name:'Mobile Application Development Lab',credits:1}
   ]},
   {sem:5,credits:26,subjects:[
     {code:'HSS',name:'HSS Elective-2',credits:3},
@@ -621,7 +598,7 @@ const CURRICULUM = [
     {code:'CS211',name:'Minor Project-1',credits:3},
     {code:'CS212',name:'Computer Networks Lab',credits:1},
     {code:'CS213',name:'Open Source Software Lab',credits:1},
-    {code:'CS214',name:'Advanced Programming Lab-II',credits:1},
+    {code:'CS214',name:'Advanced Programming Lab-II',credits:1}
   ]},
   {sem:6,credits:18,subjects:[
     {code:'HSS',name:'HSS Elective-3',credits:3},
@@ -630,48 +607,51 @@ const CURRICULUM = [
     {code:'CSE',name:'Discipline Elective-2',credits:3},
     {code:'CS215',name:'Minor Project-2',credits:3},
     {code:'CS216',name:'Operating Systems Lab',credits:1},
-    {code:'CS217',name:'Advanced Programming Lab-III',credits:1},
+    {code:'CS217',name:'Advanced Programming Lab-III',credits:1}
   ]},
   {sem:7,credits:16,subjects:[
     {code:'OE',name:'Open Elective-1',credits:3},
     {code:'CSE',name:'CS Elective-3',credits:3},
     {code:'CSE',name:'CS Elective-4',credits:3},
     {code:'CSE',name:'CS Elective-5',credits:3},
-    {code:'CS218',name:'Major Project Part-I',credits:4},
+    {code:'CS218',name:'Major Project Part-I',credits:4}
   ]},
   {sem:8,credits:17,subjects:[
     {code:'OE',name:'Open Elective-2',credits:3},
     {code:'CSE',name:'CS Elective-6',credits:3},
     {code:'CSE',name:'CS Elective-7',credits:3},
-    {code:'CS219',name:'Major Project Part-II',credits:8},
-  ]},
+    {code:'CS219',name:'Major Project Part-II',credits:8}
+  ]}
 ];
-const SEM_CREDITS   = CURRICULUM.map(s=>s.credits);
-const TOTAL_CREDITS = SEM_CREDITS.reduce((a,b)=>a+b,0);
 
-// ── STATE ───────────────────────────────────
-let currentUser   = null;
-let userProfile   = null;
-let entryMode     = 'quick';
-let quickSGPA     = Array(8).fill('');
-let semData       = freshSemData();
-let scenarios     = [];
-let saveTimer     = null;
-let mainChart     = null, barChart = null;
-let activeChartType = 'sgpa';
+var SEM_CREDITS   = CURRICULUM.map(function(s){return s.credits;});
+var TOTAL_CREDITS = SEM_CREDITS.reduce(function(a,b){return a+b;},0);
+
+// ── GLOBAL STATE (accessible by all inline handlers) ──
+var currentUser   = null;
+var userProfile   = null;
+var entryMode     = 'quick';
+var quickSGPA     = ['','','','','','','',''];
+var semData       = freshSemData();
+var scenarios     = [];
+var saveTimer     = null;
+var mainChart     = null;
+var barChart      = null;
+var activeChartType = 'sgpa';
 
 function freshSemData(){
-  return CURRICULUM.map(sem=>({
-    subjects: sem.subjects.map(s=>({code:s.code,name:s.name,credits:String(s.credits),grade:''}))
-  }));
+  return CURRICULUM.map(function(sem){
+    return {subjects: sem.subjects.map(function(s){
+      return {code:s.code, name:s.name, credits:String(s.credits), grade:''};
+    })};
+  });
 }
 
-// ── AUTH STATE OBSERVER ─────────────────────
-onAuthStateChanged(auth, async (user) => {
+// ── AUTH STATE ────────────────────────────────
+auth.onAuthStateChanged(function(user){
   if(user){
     currentUser = user;
-    await loadUserData();
-    showApp();
+    loadUserData().then(function(){ showApp(); });
   } else {
     currentUser = null;
     userProfile = null;
@@ -679,219 +659,212 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ── AUTH FUNCTIONS ───────────────────────────
-window.showAuthTab = (tab) => {
-  ['login','register','reset'].forEach(t=>{
-    document.getElementById(`auth-${t}`).style.display = t===tab?'block':'none';
+// ── AUTH FUNCTIONS ────────────────────────────
+function showAuthTab(tab){
+  ['login','register','reset'].forEach(function(t){
+    document.getElementById('auth-'+t).style.display = t===tab ? 'block' : 'none';
   });
-  document.querySelectorAll('.auth-tab').forEach((btn,i)=>{
-    btn.classList.toggle('active',['login','register','reset'][i]===tab);
+  document.querySelectorAll('.auth-tab').forEach(function(btn,i){
+    btn.classList.toggle('active', ['login','register','reset'][i]===tab);
   });
-};
-
-window.doLogin = async () => {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-pass').value;
-  const err   = document.getElementById('login-err');
-  const btn   = document.getElementById('login-btn');
-  err.classList.remove('show');
-  if(!email||!pass){showErr(err,'Please fill in all fields.');return;}
-  btn.disabled=true;
-  document.getElementById('login-btn-text').textContent='Signing in...';
-  try{
-    await signInWithEmailAndPassword(auth, email, pass);
-    // onAuthStateChanged handles the rest
-  } catch(e){
-    showErr(err, firebaseErrMsg(e.code));
-    btn.disabled=false;
-    document.getElementById('login-btn-text').textContent='Sign In →';
-  }
-};
-
-window.doRegister = async () => {
-  const name   = document.getElementById('reg-name').value.trim();
-  const email  = document.getElementById('reg-email').value.trim();
-  const enroll = document.getElementById('reg-enroll').value.trim().toUpperCase();
-  const pass   = document.getElementById('reg-pass').value;
-  const err    = document.getElementById('reg-err');
-  const btn    = document.getElementById('reg-btn');
-  err.classList.remove('show');
-  if(!name||!email||!pass){showErr(err,'Please fill in all required fields.');return;}
-  if(pass.length<6){showErr(err,'Password must be at least 6 characters.');return;}
-  btn.disabled=true;
-  document.getElementById('reg-btn-text').textContent='Creating account...';
-  try{
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    // Save profile to Firestore
-    await setDoc(doc(db,'users',cred.user.uid),{
-      name, email, enrollment: enroll||'Not provided',
-      createdAt: new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}),
-      uid: cred.user.uid
-    });
-    // Init empty academic data
-    await setDoc(doc(db,'academics',cred.user.uid),{
-      quickSGPA: Array(8).fill(''),
-      semData:   freshSemData(),
-      targetCGPA:'',
-      entryMode: 'quick',
-      scenarios: [],
-      updatedAt: serverTimestamp()
-    });
-    showToast('🎉 Account created! Welcome, '+name.split(' ')[0]+'!','success');
-  } catch(e){
-    showErr(err, firebaseErrMsg(e.code));
-    btn.disabled=false;
-    document.getElementById('reg-btn-text').textContent='Create Account →';
-  }
-};
-
-window.doPasswordReset = async () => {
-  const email = document.getElementById('reset-email').value.trim();
-  const err   = document.getElementById('reset-err');
-  const suc   = document.getElementById('reset-success');
-  const btn   = document.getElementById('reset-btn');
-  err.classList.remove('show'); suc.classList.remove('show');
-  if(!email){showErr(err,'Enter your email address.');return;}
-  btn.disabled=true;
-  document.getElementById('reset-btn-text').textContent='Sending...';
-  try{
-    await sendPasswordResetEmail(auth, email);
-    suc.textContent='✅ Reset email sent! Check your inbox.';
-    suc.classList.add('show');
-  } catch(e){
-    showErr(err, firebaseErrMsg(e.code));
-  }
-  btn.disabled=false;
-  document.getElementById('reset-btn-text').textContent='Send Reset Email →';
-};
-
-window.doLogout = async () => {
-  await saveData(true);
-  await signOut(auth);
-  closeDropdown();
-};
-
-window.doChangePassword = async () => {
-  const newP    = document.getElementById('cp-new').value;
-  const confirm = document.getElementById('cp-confirm').value;
-  const err     = document.getElementById('cp-err');
-  err.classList.remove('show');
-  if(newP.length<6){showErr(err,'Password must be at least 6 characters.');return;}
-  if(newP!==confirm){showErr(err,'Passwords do not match.');return;}
-  try{
-    await updatePassword(currentUser, newP);
-    closeModal('modal-chpass');
-    showToast('🔑 Password updated!','success');
-    await logActivity('Password changed');
-  } catch(e){
-    showErr(err, e.code==='auth/requires-recent-login'
-      ? 'Please sign out and sign in again before changing your password.'
-      : firebaseErrMsg(e.code));
-  }
-};
-
-window.doDeleteAccount = async () => {
-  const pass = document.getElementById('del-pass').value;
-  const err  = document.getElementById('del-err');
-  err.classList.remove('show');
-  if(!pass){showErr(err,'Enter your password to confirm.');return;}
-  try{
-    const cred = EmailAuthProvider.credential(currentUser.email, pass);
-    await reauthenticateWithCredential(currentUser, cred);
-    // Delete Firestore data
-    await deleteDoc(doc(db,'users',currentUser.uid));
-    await deleteDoc(doc(db,'academics',currentUser.uid));
-    // Delete auth account
-    await deleteUser(currentUser);
-    closeModal('modal-del-account');
-    showToast('Account deleted.','info');
-  } catch(e){
-    showErr(err, e.code==='auth/wrong-password'
-      ? 'Incorrect password.'
-      : firebaseErrMsg(e.code));
-  }
-};
-
-// ── FIRESTORE DATA ───────────────────────────
-async function loadUserData(){
-  try{
-    // Load profile
-    const profileSnap = await getDoc(doc(db,'users',currentUser.uid));
-    if(profileSnap.exists()) userProfile = profileSnap.data();
-
-    // Load academics
-    const acadSnap = await getDoc(doc(db,'academics',currentUser.uid));
-    if(acadSnap.exists()){
-      const d = acadSnap.data();
-      quickSGPA  = d.quickSGPA  || Array(8).fill('');
-      semData    = d.semData    || freshSemData();
-      entryMode  = d.entryMode  || 'quick';
-      scenarios  = d.scenarios  || [];
-      // restore target input after DOM is ready
-      setTimeout(()=>{
-        const t=document.getElementById('targetCGPA');
-        if(t&&d.targetCGPA) t.value=d.targetCGPA;
-      },100);
-    }
-  } catch(e){ console.error('Load error',e); }
 }
 
-window.saveData = async (silent=false) => {
-  if(!currentUser) return;
-  setSaveDot('saving');
-  try{
-    const tgt = document.getElementById('targetCGPA')?.value||'';
-    await setDoc(doc(db,'academics',currentUser.uid),{
-      quickSGPA, semData, entryMode, scenarios,
-      targetCGPA: tgt,
-      updatedAt: serverTimestamp()
+function setBtnLoading(btnId, textId, loading, defaultText){
+  var btn = document.getElementById(btnId);
+  if(textId) document.getElementById(textId).textContent = loading ? 'Please wait...' : defaultText;
+  if(btn) btn.disabled = loading;
+}
+
+function doLogin(){
+  var email = document.getElementById('login-email').value.trim();
+  var pass  = document.getElementById('login-pass').value;
+  var err   = document.getElementById('login-err');
+  err.classList.remove('show');
+  if(!email||!pass){ showErr(err,'Please fill in all fields.'); return; }
+  setBtnLoading('login-btn', null, true);
+  document.getElementById('login-btn').textContent = 'Signing in...';
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(function(e){
+      showErr(err, fbErr(e.code));
+      document.getElementById('login-btn').textContent = 'Sign In →';
+      document.getElementById('login-btn').disabled = false;
     });
+}
+
+function doRegister(){
+  var name   = document.getElementById('reg-name').value.trim();
+  var email  = document.getElementById('reg-email').value.trim();
+  var enroll = document.getElementById('reg-enroll').value.trim().toUpperCase();
+  var pass   = document.getElementById('reg-pass').value;
+  var err    = document.getElementById('reg-err');
+  err.classList.remove('show');
+  if(!name||!email||!pass){ showErr(err,'Please fill in all required fields.'); return; }
+  if(pass.length<6){ showErr(err,'Password must be at least 6 characters.'); return; }
+  var btn = document.getElementById('reg-btn');
+  btn.disabled=true; btn.textContent='Creating account...';
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(function(cred){
+      var uid = cred.user.uid;
+      var profile = {
+        name: name, email: email,
+        enrollment: enroll||'Not provided',
+        createdAt: new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}),
+        uid: uid, activity: []
+      };
+      return db.collection('users').doc(uid).set(profile)
+        .then(function(){
+          return db.collection('academics').doc(uid).set({
+            quickSGPA: ['','','','','','','',''],
+            semData:   freshSemData(),
+            targetCGPA:'', entryMode:'quick', scenarios:[],
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        });
+    })
+    .then(function(){ showToast('🎉 Account created! Welcome, '+name.split(' ')[0]+'!','success'); })
+    .catch(function(e){
+      showErr(err, fbErr(e.code));
+      btn.disabled=false; btn.textContent='Create Account →';
+    });
+}
+
+function doPasswordReset(){
+  var email = document.getElementById('reset-email').value.trim();
+  var err   = document.getElementById('reset-err');
+  var ok    = document.getElementById('reset-ok');
+  err.classList.remove('show'); ok.classList.remove('show');
+  if(!email){ showErr(err,'Enter your email address.'); return; }
+  var btn = document.getElementById('reset-btn');
+  btn.disabled=true; btn.textContent='Sending...';
+  auth.sendPasswordResetEmail(email)
+    .then(function(){ ok.textContent='✅ Reset email sent! Check your inbox.'; ok.classList.add('show'); })
+    .catch(function(e){ showErr(err, fbErr(e.code)); })
+    .finally(function(){ btn.disabled=false; btn.textContent='Send Reset Email →'; });
+}
+
+function doLogout(){
+  saveData(true).then(function(){ auth.signOut(); });
+  closeDropdown();
+}
+
+function doChangePassword(){
+  var newP    = document.getElementById('cp-new').value;
+  var confirm = document.getElementById('cp-confirm').value;
+  var err     = document.getElementById('cp-err');
+  err.classList.remove('show');
+  if(newP.length<6){ showErr(err,'Password must be at least 6 characters.'); return; }
+  if(newP!==confirm){ showErr(err,'Passwords do not match.'); return; }
+  currentUser.updatePassword(newP)
+    .then(function(){
+      closeModal('modal-chpass');
+      showToast('🔑 Password updated successfully!','success');
+      logActivity('Password changed');
+    })
+    .catch(function(e){ showErr(err, e.code==='auth/requires-recent-login'
+      ? 'Please sign out and sign in again before changing your password.'
+      : fbErr(e.code));
+    });
+}
+
+function doDeleteAccount(){
+  var pass = document.getElementById('del-pass').value;
+  var err  = document.getElementById('del-err');
+  err.classList.remove('show');
+  if(!pass){ showErr(err,'Enter your password to confirm.'); return; }
+  var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pass);
+  currentUser.reauthenticateWithCredential(cred)
+    .then(function(){
+      var uid = currentUser.uid;
+      return db.collection('users').doc(uid).delete()
+        .then(function(){ return db.collection('academics').doc(uid).delete(); })
+        .then(function(){ return currentUser.delete(); });
+    })
+    .then(function(){ closeModal('modal-del-account'); showToast('Account deleted.','info'); })
+    .catch(function(e){ showErr(err, e.code==='auth/wrong-password' ? 'Incorrect password.' : fbErr(e.code)); });
+}
+
+// ── FIRESTORE DATA ─────────────────────────────
+function loadUserData(){
+  var uid = currentUser.uid;
+  return db.collection('users').doc(uid).get()
+    .then(function(snap){
+      if(snap.exists) userProfile = snap.data();
+      return db.collection('academics').doc(uid).get();
+    })
+    .then(function(snap){
+      if(snap.exists){
+        var d = snap.data();
+        quickSGPA = d.quickSGPA || ['','','','','','','',''];
+        semData   = d.semData   || freshSemData();
+        entryMode = d.entryMode || 'quick';
+        scenarios = d.scenarios || [];
+        setTimeout(function(){
+          var t = document.getElementById('targetCGPA');
+          if(t && d.targetCGPA) t.value = d.targetCGPA;
+          liveUpdate();
+        }, 200);
+      }
+    })
+    .catch(function(e){ console.error('Load error:', e); });
+}
+
+function saveData(silent){
+  if(!currentUser) return Promise.resolve();
+  setSaveDot('saving');
+  var tgt = (document.getElementById('targetCGPA')||{}).value || '';
+  return db.collection('academics').doc(currentUser.uid).set({
+    quickSGPA: quickSGPA,
+    semData:   semData,
+    entryMode: entryMode,
+    scenarios: scenarios,
+    targetCGPA: tgt,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  })
+  .then(function(){
     setSaveDot('saved');
     if(!silent) showToast('💾 Saved to database!','success');
-    await logActivity('Data saved');
-  } catch(e){
+    logActivity('Data saved');
+  })
+  .catch(function(e){
     setSaveDot('error');
     if(!silent) showToast('❌ Save failed: '+e.message,'error');
-  }
-};
-
-window.scheduleSave = () => {
-  clearTimeout(saveTimer);
-  setSaveDot('saving');
-  saveTimer = setTimeout(()=>saveData(true), 2500);
-};
-
-async function logActivity(msg){
-  if(!currentUser) return;
-  try{
-    await updateDoc(doc(db,'users',currentUser.uid),{
-      activity: arrayUnion({
-        msg,
-        time: new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
-      })
-    });
-  } catch(e){}
+  });
 }
 
-// ── SHOW / HIDE SCREENS ──────────────────────
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  setSaveDot('saving');
+  saveTimer = setTimeout(function(){ saveData(true); }, 2500);
+}
+
+function logActivity(msg){
+  if(!currentUser) return;
+  db.collection('users').doc(currentUser.uid).update({
+    activity: firebase.firestore.FieldValue.arrayUnion({
+      msg: msg,
+      time: new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+    })
+  }).catch(function(){});
+}
+
+// ── SHOW/HIDE SCREENS ─────────────────────────
 function showApp(){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   if(!userProfile) return;
-  const initials = userProfile.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('nav-avatar').textContent            = initials;
-  document.getElementById('nav-username').textContent          = userProfile.name.split(' ')[0];
-  document.getElementById('pd-name').textContent               = userProfile.name;
-  document.getElementById('pd-email').textContent              = userProfile.email;
-  document.getElementById('welcome-name').textContent          = userProfile.name.split(' ')[0];
-  document.getElementById('profile-avatar-large').textContent  = initials;
-  document.getElementById('profile-fullname').textContent      = userProfile.name;
-  document.getElementById('profile-email-display').textContent = userProfile.email;
-  document.getElementById('profile-enroll-display').textContent= userProfile.enrollment||'–';
-  document.getElementById('prof-since').textContent            = userProfile.createdAt||'–';
+  var initials = userProfile.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+  document.getElementById('nav-avatar').textContent             = initials;
+  document.getElementById('nav-username').textContent           = userProfile.name.split(' ')[0];
+  document.getElementById('pd-name').textContent                = userProfile.name;
+  document.getElementById('pd-email').textContent               = userProfile.email;
+  document.getElementById('welcome-name').textContent           = userProfile.name.split(' ')[0];
+  document.getElementById('profile-avatar-large').textContent   = initials;
+  document.getElementById('profile-fullname').textContent       = userProfile.name;
+  document.getElementById('profile-email-display').textContent  = userProfile.email;
+  document.getElementById('profile-enroll-display').textContent = userProfile.enrollment||'–';
+  document.getElementById('prof-since').textContent             = userProfile.createdAt||'–';
   buildSemGrid();
-  liveUpdate();
   buildFullCreditTable();
 }
 
@@ -901,440 +874,512 @@ function showAuth(){
   document.getElementById('app-screen').style.display='none';
 }
 
-// ── MODE ─────────────────────────────────────
-window.setMode = (mode) => {
-  entryMode=mode;
-  document.getElementById('mode-btn-quick').classList.toggle('active',mode==='quick');
-  document.getElementById('mode-btn-detailed').classList.toggle('active',mode==='detailed');
-  buildSemGrid();liveUpdate();scheduleSave();
-};
+// ── MODE ──────────────────────────────────────
+function setMode(mode){
+  entryMode = mode;
+  document.getElementById('mode-btn-quick').classList.toggle('active', mode==='quick');
+  document.getElementById('mode-btn-detailed').classList.toggle('active', mode==='detailed');
+  buildSemGrid();
+  liveUpdate();
+  scheduleSave();
+}
 
-// ── BUILD SEM GRID ───────────────────────────
-window.buildSemGrid = () => {
-  const grid=document.getElementById('semGrid');
-  grid.innerHTML='';
-  for(let i=0;i<8;i++){
-    const sg=computeSGPA(i);
-    const card=document.createElement('div');
-    card.className='sem-card'+(sg!==null?' has-data':'');
-    card.id=`sem-card-${i}`;
-    card.innerHTML=`
-      <div class="sem-header" onclick="toggleSem(${i})">
-        <div>
-          <div class="sem-title">SEMESTER ${i+1}</div>
-          <div class="sem-credits-badge">${SEM_CREDITS[i]} credits · ${CURRICULUM[i].subjects.length} subjects</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div id="sem-sgpa-top-${i}">
-            ${sg!==null?`<span class="sem-sgpa-display">${sg.toFixed(2)}</span>`:`<span class="sem-sgpa-display empty">—</span>`}
-          </div>
-          <span class="sem-toggle">▼</span>
-        </div>
-      </div>
-      <div class="sem-body"><div class="sem-body-inner" id="sem-body-inner-${i}"></div></div>`;
+// ── BUILD SEM GRID ────────────────────────────
+function buildSemGrid(){
+  var grid = document.getElementById('semGrid');
+  grid.innerHTML = '';
+  for(var i=0; i<8; i++){
+    var sg = computeSGPA(i);
+    var card = document.createElement('div');
+    card.className = 'sem-card' + (sg!==null?' has-data':'');
+    card.id = 'sem-card-'+i;
+    var sgpaHTML = sg!==null
+      ? '<span class="sem-sgpa-display">'+sg.toFixed(2)+'</span>'
+      : '<span class="sem-sgpa-display empty">—</span>';
+    card.innerHTML =
+      '<div class="sem-header" onclick="toggleSem('+i+')">' +
+        '<div>' +
+          '<div class="sem-title">SEMESTER '+(i+1)+'</div>' +
+          '<div class="sem-credits-badge">'+SEM_CREDITS[i]+' credits · '+CURRICULUM[i].subjects.length+' subjects</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div id="sem-sgpa-top-'+i+'">'+sgpaHTML+'</div>' +
+          '<span class="sem-toggle">▼</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="sem-body"><div class="sem-body-inner" id="sem-body-inner-'+i+'"></div></div>';
     grid.appendChild(card);
     renderSemBody(i);
   }
   buildWhatIfDropdown();
-};
+}
 
-window.renderSemBody = (i) => {
-  const inner=document.getElementById(`sem-body-inner-${i}`);
+function renderSemBody(i){
+  var inner = document.getElementById('sem-body-inner-'+i);
   if(!inner) return;
-  if(entryMode==='quick'){
-    inner.innerHTML=`
-      <div class="quick-sgpa-wrap">
-        <label>SGPA:</label>
-        <input class="quick-inp" type="number" step="0.01" min="0" max="10"
-               id="quick-${i}" value="${quickSGPA[i]||''}" placeholder="0.00–10.00"
-               oninput="quickSGPA[${i}]=this.value;updateSemHeader(${i});liveUpdate();scheduleSave()"/>
-        <button class="clear-btn" onclick="clearQuickSem(${i})">✕</button>
-      </div>
-      <div class="quick-subjects">
-        ${CURRICULUM[i].subjects.map(s=>`
-          <div class="quick-subject-row">
-            <span class="quick-subject-code">${s.code}</span>
-            <span class="quick-subject-name">${s.name}</span>
-            <span class="quick-subject-cr">${s.credits}cr</span>
-          </div>`).join('')}
-      </div>
-      <div class="audit-note">★ Audit courses excluded · Total counted: ${SEM_CREDITS[i]} credits</div>`;
+
+  if(entryMode === 'quick'){
+    var subRows = CURRICULUM[i].subjects.map(function(s){
+      return '<div class="quick-subject-row">' +
+        '<span class="quick-subject-code">'+s.code+'</span>' +
+        '<span class="quick-subject-name">'+s.name+'</span>' +
+        '<span class="quick-subject-cr">'+s.credits+'cr</span>' +
+      '</div>';
+    }).join('');
+    inner.innerHTML =
+      '<div class="quick-sgpa-wrap">' +
+        '<label>SGPA:</label>' +
+        '<input class="quick-inp" type="number" step="0.01" min="0" max="10"' +
+          ' id="quick-'+i+'"' +
+          ' value="'+(quickSGPA[i]||'')+'"' +
+          ' placeholder="0.00–10.00"' +
+          ' oninput="onQuickInput('+i+',this.value)"/>' +
+        '<button class="clear-btn" onclick="clearQuickSem('+i+')">✕ Clear</button>' +
+      '</div>' +
+      '<div class="quick-subjects">'+subRows+'</div>' +
+      '<div class="audit-note">★ Audit courses excluded · Total counted: '+SEM_CREDITS[i]+' credits</div>';
   } else {
-    let rows='';
-    semData[i].subjects.forEach((sub,ji)=>{
-      const gp=sub.credits&&sub.grade!==''?(parseFloat(sub.grade)*parseFloat(sub.credits)).toFixed(1):'—';
-      rows+=`<div class="subject-row">
-        <input class="inp name-inp" type="text" value="${esc(sub.name)}" placeholder="Subject"
-               oninput="semData[${i}].subjects[${ji}].name=this.value;scheduleSave()"/>
-        <input class="inp" type="number" step="0.5" min="0" max="10" value="${sub.credits}" placeholder="Cr"
-               oninput="semData[${i}].subjects[${ji}].credits=this.value;calcDetailedSGPA(${i})"/>
-        <select class="grade-select" onchange="semData[${i}].subjects[${ji}].grade=this.value;calcDetailedSGPA(${i})">
-          <option value="">–</option>
-          ${[10,9,8,7,6,5,4,0].map(g=>`<option value="${g}"${sub.grade==String(g)?' selected':''}>
-            ${g===10?'O':g===9?'A+':g===8?'A':g===7?'B+':g===6?'B':g===5?'C':g===4?'P':'F'} (${g})
-          </option>`).join('')}
-        </select>
-        <span style="font-family:var(--font-mono);font-size:12px;color:var(--cyan);text-align:center" id="gp-${i}-${ji}">${gp}</span>
-      </div>`;
-    });
-    inner.innerHTML=`
-      <div class="subject-row header-row"><span>Subject</span><span>Cr</span><span>Grade</span><span>GP</span></div>
-      <div id="subjects-${i}">${rows}</div>
-      <button class="add-subject-btn" onclick="addSubject(${i})">+ Add Subject</button>
-      <div class="sgpa-result-row">
-        <span class="sgpa-label">SGPA (Sem ${i+1})</span>
-        <span class="sgpa-val" id="sgpa-live-${i}">—</span>
-      </div>
-      <div class="audit-note">★ Audit courses excluded · Total counted: ${SEM_CREDITS[i]} credits</div>`;
-    calcDetailedSGPA(i,false);
+    var rows = '';
+    for(var ji=0; ji<semData[i].subjects.length; ji++){
+      var sub = semData[i].subjects[ji];
+      var gp  = sub.credits && sub.grade!=='' ? (parseFloat(sub.grade)*parseFloat(sub.credits)).toFixed(1) : '—';
+      var opts = [10,9,8,7,6,5,4,0].map(function(g){
+        var lbl = g===10?'O':g===9?'A+':g===8?'A':g===7?'B+':g===6?'B':g===5?'C':g===4?'P':'F';
+        return '<option value="'+g+'"'+(sub.grade==String(g)?' selected':'')+'>'+lbl+' ('+g+')</option>';
+      }).join('');
+      rows +=
+        '<div class="subject-row">' +
+          '<input class="inp name-inp" type="text" value="'+esc(sub.name)+'" placeholder="Subject"' +
+            ' oninput="semData['+i+'].subjects['+ji+'].name=this.value;scheduleSave()"/>' +
+          '<input class="inp" type="number" step="0.5" min="0" max="10" value="'+sub.credits+'" placeholder="Cr"' +
+            ' oninput="semData['+i+'].subjects['+ji+'].credits=this.value;calcDetailedSGPA('+i+')"/>' +
+          '<select class="grade-select" onchange="semData['+i+'].subjects['+ji+'].grade=this.value;calcDetailedSGPA('+i+')">' +
+            '<option value="">–</option>'+opts+
+          '</select>' +
+          '<span style="font-family:var(--font-mono);font-size:12px;color:var(--cyan);text-align:center" id="gp-'+i+'-'+ji+'">'+gp+'</span>' +
+        '</div>';
+    }
+    inner.innerHTML =
+      '<div class="subject-row header-row"><span>Subject</span><span>Cr</span><span>Grade</span><span>GP</span></div>' +
+      '<div id="subjects-'+i+'">'+rows+'</div>' +
+      '<button class="add-subject-btn" onclick="addSubject('+i+')">+ Add Subject</button>' +
+      '<div class="sgpa-result-row">' +
+        '<span class="sgpa-label">SGPA (Sem '+(i+1)+')</span>' +
+        '<span class="sgpa-val" id="sgpa-live-'+i+'">—</span>' +
+      '</div>' +
+      '<div class="audit-note">★ Audit courses excluded · Counted: '+SEM_CREDITS[i]+' credits</div>';
+    calcDetailedSGPA(i, false);
   }
-};
+}
+
+// KEY FIX: dedicated handler for quick SGPA input
+function onQuickInput(i, val){
+  quickSGPA[i] = val;
+  updateSemHeader(i);
+  liveUpdate();
+  scheduleSave();
+}
 
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-window.toggleSem = (i)=>document.getElementById(`sem-card-${i}`).classList.toggle('open');
-window.clearQuickSem = (i)=>{quickSGPA[i]='';const el=document.getElementById(`quick-${i}`);if(el)el.value='';updateSemHeader(i);liveUpdate();scheduleSave();};
-window.addSubject = (si)=>{semData[si].subjects.push({code:'',name:'',credits:'',grade:''});renderSemBody(si);scheduleSave();};
+function toggleSem(i){ document.getElementById('sem-card-'+i).classList.toggle('open'); }
+function clearQuickSem(i){
+  quickSGPA[i]='';
+  var el=document.getElementById('quick-'+i); if(el) el.value='';
+  updateSemHeader(i); liveUpdate(); scheduleSave();
+}
+function addSubject(si){
+  semData[si].subjects.push({code:'',name:'',credits:'',grade:''});
+  renderSemBody(si); scheduleSave();
+}
 
-// ── SGPA ─────────────────────────────────────
+// ── SGPA COMPUTE ─────────────────────────────
 function computeSGPA(i){
-  if(entryMode==='quick'){const v=parseFloat(quickSGPA[i]);return !isNaN(v)&&v>=0&&v<=10?v:null;}
+  if(entryMode==='quick'){
+    var v = parseFloat(quickSGPA[i]);
+    return (!isNaN(v) && v>=0 && v<=10) ? v : null;
+  }
   return computeDetailedSGPA(i);
 }
 function computeDetailedSGPA(i){
-  let gp=0,cr=0;
-  semData[i].subjects.forEach(s=>{if(s.credits&&s.grade!==''){gp+=parseFloat(s.credits)*parseFloat(s.grade);cr+=parseFloat(s.credits);}});
-  return cr>0?gp/cr:null;
-}
-window.calcDetailedSGPA = (i,doHeader=true)=>{
-  semData[i].subjects.forEach((s,ji)=>{
-    const el=document.getElementById(`gp-${i}-${ji}`);
-    if(el) el.textContent=s.credits&&s.grade!==''?(parseFloat(s.credits)*parseFloat(s.grade)).toFixed(1):'—';
+  var gp=0, cr=0;
+  semData[i].subjects.forEach(function(s){
+    if(s.credits && s.grade!==''){
+      gp += parseFloat(s.credits)*parseFloat(s.grade);
+      cr += parseFloat(s.credits);
+    }
   });
-  const sg=computeDetailedSGPA(i);
-  const el=document.getElementById(`sgpa-live-${i}`);
-  if(el) el.textContent=sg!==null?sg.toFixed(2):'—';
-  if(doHeader) updateSemHeader(i);
-  liveUpdate();scheduleSave();
-};
-function updateSemHeader(i){
-  const sg=computeSGPA(i);
-  const top=document.getElementById(`sem-sgpa-top-${i}`);
-  const card=document.getElementById(`sem-card-${i}`);
-  if(!top) return;
-  top.innerHTML=sg!==null?`<span class="sem-sgpa-display">${sg.toFixed(2)}</span>`:`<span class="sem-sgpa-display empty">—</span>`;
-  card.classList.toggle('has-data',sg!==null);
+  return cr>0 ? gp/cr : null;
 }
-window.updateSemHeader = updateSemHeader;
-function getSGPAs(){return Array.from({length:8},(_,i)=>computeSGPA(i));}
+function calcDetailedSGPA(i, doHeader){
+  if(doHeader===undefined) doHeader=true;
+  semData[i].subjects.forEach(function(s,ji){
+    var el = document.getElementById('gp-'+i+'-'+ji);
+    if(el) el.textContent = (s.credits&&s.grade!=='') ? (parseFloat(s.credits)*parseFloat(s.grade)).toFixed(1) : '—';
+  });
+  var sg = computeDetailedSGPA(i);
+  var el = document.getElementById('sgpa-live-'+i);
+  if(el) el.textContent = sg!==null ? sg.toFixed(2) : '—';
+  if(doHeader) updateSemHeader(i);
+  liveUpdate(); scheduleSave();
+}
+function updateSemHeader(i){
+  var sg   = computeSGPA(i);
+  var top  = document.getElementById('sem-sgpa-top-'+i);
+  var card = document.getElementById('sem-card-'+i);
+  if(!top) return;
+  top.innerHTML = sg!==null
+    ? '<span class="sem-sgpa-display">'+sg.toFixed(2)+'</span>'
+    : '<span class="sem-sgpa-display empty">—</span>';
+  card.classList.toggle('has-data', sg!==null);
+}
+function getSGPAs(){
+  return CURRICULUM.map(function(_,i){ return computeSGPA(i); });
+}
 
-// ── CALCULATE ────────────────────────────────
-window.calculate = ()=>{
-  const sgpas=getSGPAs();
-  let total=0,cSum=0,completed=0,remCr=0;
-  sgpas.forEach((s,i)=>{if(s!==null){total+=s*SEM_CREDITS[i];cSum+=SEM_CREDITS[i];completed++;}else remCr+=SEM_CREDITS[i];});
-  if(cSum===0){alert('Enter at least one semester SGPA.');return;}
-  const cgpa=total/cSum,pct=(cgpa*10).toFixed(1);
-  const valids=sgpas.filter(s=>s!==null),best=Math.max(...valids),bestIdx=sgpas.indexOf(best);
-  const{rank,cls}=getCGPARank(cgpa);
+// ── CALCULATE ─────────────────────────────────
+function calculate(){
+  var sgpas = getSGPAs();
+  var total=0, cSum=0, completed=0, remCr=0;
+  sgpas.forEach(function(s,i){
+    if(s!==null){ total+=s*SEM_CREDITS[i]; cSum+=SEM_CREDITS[i]; completed++; }
+    else remCr += SEM_CREDITS[i];
+  });
+  if(cSum===0){ alert('Enter at least one semester SGPA.'); return; }
+
+  var cgpa = total/cSum;
+  var pct  = (cgpa*10).toFixed(1);
+  var valids = sgpas.filter(function(s){return s!==null;});
+  var best = Math.max.apply(null,valids);
+  var bestIdx = sgpas.indexOf(best);
+  var cr = getCGPARank(cgpa);
 
   // stat cards
-  document.getElementById('sc-cgpa').textContent=cgpa.toFixed(2);
-  document.getElementById('sc-cgpa').className='stat-value '+cgpaColor(cgpa);
-  document.getElementById('sc-cgpa-sub').textContent=`${pct}% equivalent`;
-  document.getElementById('sc-done').textContent=completed;
-  document.getElementById('sc-best').textContent=best.toFixed(2);
-  document.getElementById('sc-best').className='stat-value '+cgpaColor(best);
-  document.getElementById('sc-best-sub').textContent=`Sem ${bestIdx+1}`;
-  document.getElementById('sc-rank').innerHTML=`<span class="rank-badge ${rank}">${cls}</span>`;
-  document.getElementById('sc-rank-sub').textContent=`CGPA ${cgpa.toFixed(2)}`;
+  set('sc-cgpa', cgpa.toFixed(2), 'stat-value '+cgpaColor(cgpa));
+  document.getElementById('sc-cgpa-sub').textContent = pct+'% equivalent';
+  document.getElementById('sc-done').textContent = completed;
+  set('sc-best', best.toFixed(2), 'stat-value '+cgpaColor(best));
+  document.getElementById('sc-best-sub').textContent = 'Sem '+(bestIdx+1);
+  document.getElementById('sc-rank').innerHTML = '<span class="rank-badge '+cr.rank+'">'+cr.cls+'</span>';
+  document.getElementById('sc-rank-sub').textContent = 'CGPA '+cgpa.toFixed(2);
 
-  // results
-  document.getElementById('resultsSection').style.display='block';
-  document.getElementById('r-cgpa').textContent=cgpa.toFixed(2);
-  document.getElementById('r-cgpa').className='r-val cyan';
-  document.getElementById('r-credits').textContent=`${cSum.toFixed(1)} / ${TOTAL_CREDITS}`;
-  document.getElementById('r-gp').textContent=total.toFixed(2);
-  const maxCGPA=(total+remCr*10)/(cSum+remCr);
-  document.getElementById('r-max').textContent=maxCGPA.toFixed(2);
-  document.getElementById('r-max').className='r-val green';
+  // results panel
+  document.getElementById('resultsSection').style.display = 'block';
+  set('r-cgpa', cgpa.toFixed(2), 'r-val cyan');
+  document.getElementById('r-credits').textContent = cSum.toFixed(1)+' / '+TOTAL_CREDITS;
+  document.getElementById('r-gp').textContent = total.toFixed(2);
+  var maxCGPA = (total+remCr*10)/(cSum+remCr);
+  set('r-max', maxCGPA.toFixed(2), 'r-val green');
 
-  const tgt=parseFloat(document.getElementById('targetCGPA').value);
-  if(!isNaN(tgt)&&tgt>0){
-    const remPts=tgt*TOTAL_CREDITS-total;
-    const avgReq=remCr>0?remPts/remCr:null;
-    const nextIdx=completed<8?completed:null;
-    const nextNeeded=nextIdx!==null?(tgt*(cSum+SEM_CREDITS[nextIdx])-total)/SEM_CREDITS[nextIdx]:null;
-    document.getElementById('r-avg').textContent=avgReq!==null?avgReq.toFixed(2):'—';
-    document.getElementById('r-avg').className='r-val '+(avgReq>10?'red':avgReq>9?'amber':'green');
-    document.getElementById('r-next').textContent=nextNeeded!==null?nextNeeded.toFixed(2):'—';
-    document.getElementById('r-next').className='r-val '+(nextNeeded>10?'red':nextNeeded>9?'amber':'green');
-    const sd=document.getElementById('r-status');
-    if(avgReq===null||avgReq<=cgpa) sd.innerHTML=`<div class="status-banner achievable">✅ Target already achieved or on track!</div>`;
-    else if(avgReq<=10) sd.innerHTML=`<div class="status-banner ${avgReq<=8.5?'achievable':'warning'}">${avgReq<=8.5?'✅ Achievable':'⚠️ Needs consistent effort'} — need avg SGPA <strong>${avgReq.toFixed(2)}</strong></div>`;
-    else sd.innerHTML=`<div class="status-banner impossible">❌ Target ${tgt} not achievable (max: ${maxCGPA.toFixed(2)})</div>`;
-    const prog=Math.min((cgpa/tgt)*100,100);
-    document.getElementById('r-bar').style.width=prog+'%';
-    document.getElementById('r-progress-pct').textContent=prog.toFixed(1)+'%';
-    if(avgReq!==null&&avgReq<=10&&remCr>0)
-      document.getElementById('r-strategy').textContent='💡 Suggested: '+sgpas.map((s,i)=>s===null?`Sem${i+1}:${avgReq.toFixed(2)}`:null).filter(Boolean).join('   ');
-    else document.getElementById('r-strategy').textContent='';
+  var tgt = parseFloat(document.getElementById('targetCGPA').value);
+  if(!isNaN(tgt) && tgt>0){
+    var remPts = tgt*TOTAL_CREDITS - total;
+    var avgReq = remCr>0 ? remPts/remCr : null;
+    var nextIdx = completed<8 ? completed : null;
+    var nextNeeded = nextIdx!==null ? (tgt*(cSum+SEM_CREDITS[nextIdx])-total)/SEM_CREDITS[nextIdx] : null;
+
+    set('r-avg',  avgReq!==null  ? avgReq.toFixed(2)  : '—', 'r-val '+(avgReq>10?'red':avgReq>9?'amber':'green'));
+    set('r-next', nextNeeded!==null ? nextNeeded.toFixed(2) : '—', 'r-val '+(nextNeeded>10?'red':nextNeeded>9?'amber':'green'));
+
+    var sd = document.getElementById('r-status');
+    if(avgReq===null||avgReq<=cgpa)
+      sd.innerHTML='<div class="status-banner achievable">✅ Target already achieved or on track!</div>';
+    else if(avgReq<=10)
+      sd.innerHTML='<div class="status-banner '+(avgReq<=8.5?'achievable':'warning')+'">'+(avgReq<=8.5?'✅ Achievable':'⚠️ Needs consistent effort')+' — need avg SGPA <strong>'+avgReq.toFixed(2)+'</strong></div>';
+    else
+      sd.innerHTML='<div class="status-banner impossible">❌ Target '+tgt+' not achievable (max: '+maxCGPA.toFixed(2)+')</div>';
+
+    var prog = Math.min((cgpa/tgt)*100, 100);
+    document.getElementById('r-bar').style.width = prog+'%';
+    document.getElementById('r-progress-pct').textContent = prog.toFixed(1)+'%';
+
+    if(avgReq!==null && avgReq<=10 && remCr>0){
+      var parts = sgpas.map(function(s,i){ return s===null?'Sem'+(i+1)+':'+avgReq.toFixed(2):null; }).filter(Boolean);
+      document.getElementById('r-strategy').textContent = '💡 Suggested: '+parts.join('   ');
+    } else { document.getElementById('r-strategy').textContent=''; }
   } else {
-    ['r-avg','r-next'].forEach(id=>{document.getElementById(id).textContent='—';document.getElementById(id).className='r-val';});
+    ['r-avg','r-next'].forEach(function(id){ set(id,'—','r-val'); });
     document.getElementById('r-status').innerHTML='';
     document.getElementById('r-bar').style.width='0%';
     document.getElementById('r-progress-pct').textContent='0%';
     document.getElementById('r-strategy').textContent='';
   }
-  drawCharts(sgpas,cgpa,completed);
-  buildInsights(sgpas,cgpa,completed,valids);
-  updateProfileStats(cgpa,cSum,valids,best,cls,rank);
-  const refEl=document.getElementById('cgpa-pct-live');
-  if(refEl) refEl.innerHTML=`Your CGPA <span style="color:var(--cyan);font-weight:700">${cgpa.toFixed(2)}</span> = <span style="color:var(--green);font-weight:700">${(cgpa*10).toFixed(2)}%</span>`;
-};
 
-function liveUpdate(){if(getSGPAs().some(s=>s!==null)) calculate();}
-window.liveUpdate = liveUpdate;
-
-// ── CHARTS ───────────────────────────────────
-function drawCharts(sgpas,cgpa,completed){
-  const labels=CURRICULUM.map((_,i)=>`Sem ${i+1}`);
-  let rt=0,rc=0;
-  const cgpaTraj=sgpas.map((s,i)=>{if(s!==null){rt+=s*SEM_CREDITS[i];rc+=SEM_CREDITS[i];return rt/rc;}return null;});
-  let cc=0;
-  const credLine=sgpas.map((s,i)=>{if(s!==null){cc+=SEM_CREDITS[i];return cc;}return null;});
-  if(mainChart) mainChart.destroy();
-  const ctx=document.getElementById('mainChart').getContext('2d');
-  let datasets;
-  if(activeChartType==='sgpa') datasets=[{label:'SGPA',data:sgpas,borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,.08)',fill:true,tension:.4,pointBackgroundColor:'#00e5ff',pointRadius:5,pointHoverRadius:8,borderWidth:2}];
-  else if(activeChartType==='cgpa'){
-    datasets=[{label:'CGPA',data:cgpaTraj,borderColor:'#39d353',backgroundColor:'rgba(57,211,83,.08)',fill:true,tension:.4,pointBackgroundColor:'#39d353',pointRadius:5,borderWidth:2}];
-    const tgt=parseFloat(document.getElementById('targetCGPA').value);
-    if(!isNaN(tgt)&&tgt>0) datasets.push({label:'Target',data:Array(8).fill(tgt),borderColor:'#e3b341',borderDash:[5,5],pointRadius:0,borderWidth:1.5,fill:false});
-  } else datasets=[
-    {label:'Credits Earned',data:credLine,borderColor:'#e3b341',backgroundColor:'rgba(227,179,65,.08)',fill:true,tension:.3,pointBackgroundColor:'#e3b341',pointRadius:5,borderWidth:2},
-    {label:'Total Credits',data:Array(8).fill(TOTAL_CREDITS),borderColor:'#484f58',borderDash:[4,4],pointRadius:0,borderWidth:1,fill:false}
-  ];
-  const opts={responsive:true,plugins:{legend:{labels:{color:'#8b949e',font:{family:'Space Mono',size:11}}},tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y!==null?c.parsed.y.toFixed(2):'—'}`}}},scales:{x:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}},min:0,max:activeChartType==='credits'?TOTAL_CREDITS:10}}};
-  mainChart=new Chart(ctx,{type:'line',data:{labels,datasets},options:opts});
-  if(barChart) barChart.destroy();
-  const bctx=document.getElementById('barChart').getContext('2d');
-  const colors=sgpas.map(s=>s===null?'rgba(48,54,61,.5)':s>=9?'rgba(0,229,255,.7)':s>=8?'rgba(57,211,83,.7)':s>=7?'rgba(227,179,65,.7)':'rgba(248,81,73,.7)');
-  barChart=new Chart(bctx,{type:'bar',data:{labels,datasets:[{label:'SGPA',data:sgpas,backgroundColor:colors,borderColor:colors.map(c=>c.replace('.7','1')),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:c=>` SGPA: ${c.parsed.y!==null?c.parsed.y.toFixed(2):'N/A'}`}}},scales:{x:{grid:{display:false},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},y:{min:0,max:10,grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}}}}});
+  drawCharts(sgpas, cgpa, completed);
+  buildInsights(sgpas, cgpa, completed, valids);
+  updateProfileStats(cgpa, cSum, valids, best, bestIdx, cr);
+  var pl = document.getElementById('cgpa-pct-live');
+  if(pl) pl.innerHTML = 'Your CGPA <span style="color:var(--cyan);font-weight:700">'+cgpa.toFixed(2)+'</span> = <span style="color:var(--green);font-weight:700">'+(cgpa*10).toFixed(2)+'%</span>';
 }
-window.switchChart = (type,evt)=>{
-  activeChartType=type;
-  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
+
+function liveUpdate(){ if(getSGPAs().some(function(s){return s!==null;})) calculate(); }
+
+// ── CHARTS ────────────────────────────────────
+function drawCharts(sgpas, cgpa, completed){
+  var labels = CURRICULUM.map(function(_,i){return 'Sem '+(i+1);});
+  var rt=0,rc=0;
+  var cgpaTraj = sgpas.map(function(s,i){if(s!==null){rt+=s*SEM_CREDITS[i];rc+=SEM_CREDITS[i];return rt/rc;}return null;});
+  var cc=0;
+  var credLine = sgpas.map(function(s,i){if(s!==null){cc+=SEM_CREDITS[i];return cc;}return null;});
+
+  if(mainChart) mainChart.destroy();
+  var ctx = document.getElementById('mainChart').getContext('2d');
+  var datasets;
+  if(activeChartType==='sgpa'){
+    datasets=[{label:'SGPA',data:sgpas,borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,.08)',fill:true,tension:.4,pointBackgroundColor:'#00e5ff',pointRadius:5,pointHoverRadius:8,borderWidth:2}];
+  } else if(activeChartType==='cgpa'){
+    datasets=[{label:'CGPA',data:cgpaTraj,borderColor:'#39d353',backgroundColor:'rgba(57,211,83,.08)',fill:true,tension:.4,pointBackgroundColor:'#39d353',pointRadius:5,borderWidth:2}];
+    var tgt=parseFloat(document.getElementById('targetCGPA').value);
+    if(!isNaN(tgt)&&tgt>0) datasets.push({label:'Target',data:Array(8).fill(tgt),borderColor:'#e3b341',borderDash:[5,5],pointRadius:0,borderWidth:1.5,fill:false});
+  } else {
+    datasets=[
+      {label:'Credits Earned',data:credLine,borderColor:'#e3b341',backgroundColor:'rgba(227,179,65,.08)',fill:true,tension:.3,pointBackgroundColor:'#e3b341',pointRadius:5,borderWidth:2},
+      {label:'Total Credits',data:Array(8).fill(TOTAL_CREDITS),borderColor:'#484f58',borderDash:[4,4],pointRadius:0,borderWidth:1,fill:false}
+    ];
+  }
+  var opts={responsive:true,plugins:{legend:{labels:{color:'#8b949e',font:{family:'Space Mono',size:11}}},tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:function(c){return ' '+c.dataset.label+': '+(c.parsed.y!==null?c.parsed.y.toFixed(2):'—');}}}},scales:{x:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}},min:0,max:activeChartType==='credits'?TOTAL_CREDITS:10}}};
+  mainChart = new Chart(ctx,{type:'line',data:{labels:labels,datasets:datasets},options:opts});
+
+  if(barChart) barChart.destroy();
+  var bctx = document.getElementById('barChart').getContext('2d');
+  var colors = sgpas.map(function(s){return s===null?'rgba(48,54,61,.5)':s>=9?'rgba(0,229,255,.7)':s>=8?'rgba(57,211,83,.7)':s>=7?'rgba(227,179,65,.7)':'rgba(248,81,73,.7)';});
+  barChart = new Chart(bctx,{type:'bar',data:{labels:labels,datasets:[{label:'SGPA',data:sgpas,backgroundColor:colors,borderColor:colors.map(function(c){return c.replace('.7','1');}),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:function(c){return ' SGPA: '+(c.parsed.y!==null?c.parsed.y.toFixed(2):'N/A');}}}},scales:{x:{grid:{display:false},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},y:{min:0,max:10,grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}}}}});
+}
+
+function switchChart(type, evt){
+  activeChartType = type;
+  document.querySelectorAll('.chart-tab').forEach(function(t){t.classList.remove('active');});
   if(evt&&evt.target) evt.target.classList.add('active');
   liveUpdate();
-};
-
-// ── INSIGHTS ─────────────────────────────────
-function buildInsights(sgpas,cgpa,completed,valids){
-  const cont=document.getElementById('insightsContent');
-  if(!completed){cont.innerHTML='<div class="empty-state"><span>📊</span>No data yet</div>';return;}
-  const avg=valids.reduce((a,b)=>a+b,0)/valids.length;
-  const best=Math.max(...valids),worst=Math.min(...valids);
-  const last2=valids.slice(-2);
-  const trend=last2.length>1?(last2[1]-last2[0]>0.05?'📈 Improving':last2[1]-last2[0]<-0.05?'📉 Declining':'➡️ Stable'):'–';
-  const{rank,cls}=getCGPARank(cgpa);
-  cont.innerHTML=`<div class="result-grid">
-    <div><div class="r-label">Avg SGPA</div><div class="r-val cyan">${avg.toFixed(2)}</div></div>
-    <div><div class="r-label">SGPA Range</div><div class="r-val">${worst.toFixed(2)} – ${best.toFixed(2)}</div></div>
-    <div><div class="r-label">Recent Trend</div><div class="r-val" style="font-size:14px">${trend}</div></div>
-    <div><div class="r-label">Equivalent %</div><div class="r-val green">${(cgpa*10).toFixed(1)}%</div></div>
-    <div><div class="r-label">Division</div><div class="r-val" style="font-size:14px"><span class="rank-badge ${rank}">${cls}</span></div></div>
-    <div><div class="r-label">Sems Remaining</div><div class="r-val amber">${8-completed}</div></div>
-  </div>`;
 }
 
-// ── PROFILE STATS ────────────────────────────
-function updateProfileStats(cgpa,cSum,valids,best,cls,rank){
-  document.getElementById('prof-cgpa').textContent=cgpa.toFixed(2);
-  document.getElementById('prof-pct').textContent=(cgpa*10).toFixed(1)+'%';
-  document.getElementById('prof-cr').textContent=cSum.toFixed(1)+' / '+TOTAL_CREDITS;
-  document.getElementById('prof-div').innerHTML=`<span class="rank-badge ${rank}">${cls}</span>`;
-  document.getElementById('prof-best').textContent=best.toFixed(2)+' (Sem '+(getSGPAs().indexOf(best)+1)+')';
+// ── INSIGHTS ──────────────────────────────────
+function buildInsights(sgpas, cgpa, completed, valids){
+  var cont = document.getElementById('insightsContent');
+  if(!completed){ cont.innerHTML='<div class="empty-state"><span>📊</span>No data yet</div>'; return; }
+  var avg   = valids.reduce(function(a,b){return a+b;},0)/valids.length;
+  var best  = Math.max.apply(null,valids), worst=Math.min.apply(null,valids);
+  var last2 = valids.slice(-2);
+  var trend = last2.length>1 ? (last2[1]-last2[0]>0.05?'📈 Improving':last2[1]-last2[0]<-0.05?'📉 Declining':'➡️ Stable') : '–';
+  var cr = getCGPARank(cgpa);
+  cont.innerHTML='<div class="result-grid">' +
+    '<div><div class="r-label">Avg SGPA</div><div class="r-val cyan">'+avg.toFixed(2)+'</div></div>' +
+    '<div><div class="r-label">SGPA Range</div><div class="r-val">'+worst.toFixed(2)+' – '+best.toFixed(2)+'</div></div>' +
+    '<div><div class="r-label">Recent Trend</div><div class="r-val" style="font-size:14px">'+trend+'</div></div>' +
+    '<div><div class="r-label">Equivalent %</div><div class="r-val green">'+(cgpa*10).toFixed(1)+'%</div></div>' +
+    '<div><div class="r-label">Division</div><div class="r-val" style="font-size:14px"><span class="rank-badge '+cr.rank+'">'+cr.cls+'</span></div></div>' +
+    '<div><div class="r-label">Sems Remaining</div><div class="r-val amber">'+(8-completed)+'</div></div>' +
+  '</div>';
+}
+
+// ── PROFILE STATS ─────────────────────────────
+function updateProfileStats(cgpa, cSum, valids, best, bestIdx, cr){
+  document.getElementById('prof-cgpa').textContent = cgpa.toFixed(2);
+  document.getElementById('prof-pct').textContent  = (cgpa*10).toFixed(1)+'%';
+  document.getElementById('prof-cr').textContent   = cSum.toFixed(1)+' / '+TOTAL_CREDITS;
+  document.getElementById('prof-div').innerHTML    = '<span class="rank-badge '+cr.rank+'">'+cr.cls+'</span>';
+  document.getElementById('prof-best').textContent = best.toFixed(2)+' (Sem '+(bestIdx+1)+')';
 }
 
 // ── WHAT-IF ───────────────────────────────────
 function buildWhatIfDropdown(){
-  const sel=document.getElementById('wi-sem');if(!sel)return;
-  sel.innerHTML='';
-  for(let i=0;i<8;i++){const o=document.createElement('option');o.value=i;o.textContent=`Semester ${i+1} (${SEM_CREDITS[i]} cr)`;sel.appendChild(o);}
+  var sel = document.getElementById('wi-sem'); if(!sel) return;
+  sel.innerHTML = '';
+  for(var i=0;i<8;i++){
+    var o=document.createElement('option'); o.value=i; o.textContent='Semester '+(i+1)+' ('+SEM_CREDITS[i]+' cr)'; sel.appendChild(o);
+  }
 }
-window.addScenario = ()=>{
-  const si=parseInt(document.getElementById('wi-sem').value),sg=parseFloat(document.getElementById('wi-sgpa').value);
-  if(isNaN(sg)||sg<0||sg>10){alert('Enter valid SGPA');return;}
-  scenarios=scenarios.filter(s=>s.sem!==si);scenarios.push({sem:si,sgpa:sg});renderScenarios();scheduleSave();
-};
-window.autoFillScenarios = ()=>{
-  const val=parseFloat(document.getElementById('wi-sgpa').value)||8.0;
-  scenarios=[];getSGPAs().forEach((s,i)=>{if(s===null) scenarios.push({sem:i,sgpa:val});});renderScenarios();scheduleSave();
-};
-window.removeScenario = (sem)=>{scenarios=scenarios.filter(s=>s.sem!==sem);renderScenarios();scheduleSave();};
-window.renderScenarios = ()=>{
-  const cont=document.getElementById('scenariosList');
-  if(!scenarios.length){cont.innerHTML='<div class="empty-state"><span>🔮</span>No scenarios yet.</div>';return;}
-  const base=getSGPAs();let bt=0,bc=0;base.forEach((s,i)=>{if(s!==null){bt+=s*SEM_CREDITS[i];bc+=SEM_CREDITS[i];}});
-  const curCGPA=bc>0?bt/bc:null;
-  const merged=base.map((s,i)=>{const sc=scenarios.find(x=>x.sem===i);return sc?sc.sgpa:s;});
-  let pt=0,pc=0;merged.forEach((s,i)=>{if(s!==null){pt+=s*SEM_CREDITS[i];pc+=SEM_CREDITS[i];}});
-  const projCGPA=pc>0?pt/pc:null;
+function addScenario(){
+  var si=parseInt(document.getElementById('wi-sem').value), sg=parseFloat(document.getElementById('wi-sgpa').value);
+  if(isNaN(sg)||sg<0||sg>10){ alert('Enter valid SGPA (0–10)'); return; }
+  scenarios = scenarios.filter(function(s){return s.sem!==si;}); scenarios.push({sem:si,sgpa:sg});
+  renderScenarios(); scheduleSave();
+}
+function autoFillScenarios(){
+  var val = parseFloat(document.getElementById('wi-sgpa').value)||8.0; scenarios=[];
+  getSGPAs().forEach(function(s,i){if(s===null) scenarios.push({sem:i,sgpa:val});});
+  renderScenarios(); scheduleSave();
+}
+function removeScenario(sem){ scenarios=scenarios.filter(function(s){return s.sem!==sem;}); renderScenarios(); scheduleSave(); }
+function renderScenarios(){
+  var cont = document.getElementById('scenariosList');
+  if(!scenarios.length){ cont.innerHTML='<div class="empty-state"><span>🔮</span>No scenarios yet.</div>'; return; }
+  var base=getSGPAs(), bt=0, bc=0;
+  base.forEach(function(s,i){if(s!==null){bt+=s*SEM_CREDITS[i];bc+=SEM_CREDITS[i];}});
+  var curCGPA = bc>0 ? bt/bc : null;
+  var merged  = base.map(function(s,i){var sc=scenarios.find(function(x){return x.sem===i;});return sc?sc.sgpa:s;});
+  var pt=0, pc=0; merged.forEach(function(s,i){if(s!==null){pt+=s*SEM_CREDITS[i];pc+=SEM_CREDITS[i];}});
+  var projCGPA = pc>0 ? pt/pc : null;
   cont.innerHTML='';
-  scenarios.sort((a,b)=>a.sem-b.sem).forEach(sc=>{
-    const row=document.createElement('div');row.className='scenario-row';
-    row.innerHTML=`<div><div class="s-label">Semester</div><div style="font-family:var(--font-mono);font-weight:700">Sem ${sc.sem+1}</div></div><div><div class="s-label">SGPA</div><div class="s-val">${sc.sgpa.toFixed(2)}</div></div><div><div class="s-label">Credits</div><div style="font-family:var(--font-mono)">${SEM_CREDITS[sc.sem]}</div></div><button class="del-btn" onclick="removeScenario(${sc.sem})">✕</button>`;
+  var sorted = scenarios.slice().sort(function(a,b){return a.sem-b.sem;});
+  sorted.forEach(function(sc){
+    var row=document.createElement('div'); row.className='scenario-row';
+    row.innerHTML='<div><div class="s-label">Semester</div><div style="font-family:var(--font-mono);font-weight:700">Sem '+(sc.sem+1)+'</div></div>' +
+      '<div><div class="s-label">SGPA</div><div class="s-val">'+sc.sgpa.toFixed(2)+'</div></div>' +
+      '<div><div class="s-label">Credits</div><div style="font-family:var(--font-mono)">'+SEM_CREDITS[sc.sem]+'</div></div>' +
+      '<button class="del-btn" onclick="removeScenario('+sc.sem+')">✕</button>';
     cont.appendChild(row);
   });
   if(projCGPA!==null){
-    const diff=curCGPA!==null?projCGPA-curCGPA:0,cls=diff>0.05?'up':diff<-0.05?'down':'same';
-    const row=document.createElement('div');row.className='scenario-row result-row-scenario';
-    row.innerHTML=`<div><div class="s-label">Projected CGPA</div><div class="s-cgpa ${cls}">${projCGPA.toFixed(2)}</div></div><div><div class="s-label">Change</div><div class="s-cgpa ${cls}">${diff>=0?'+':''}${diff.toFixed(2)}</div></div><div><div class="s-label">Equiv %</div><div style="font-family:var(--font-mono);color:var(--amber)">${(projCGPA*10).toFixed(1)}%</div></div><div></div>`;
+    var diff = curCGPA!==null ? projCGPA-curCGPA : 0;
+    var cls  = diff>0.05?'up':diff<-0.05?'down':'same';
+    var row  = document.createElement('div'); row.className='scenario-row result-row';
+    row.innerHTML='<div><div class="s-label">Projected CGPA</div><div class="s-cgpa '+cls+'">'+projCGPA.toFixed(2)+'</div></div>' +
+      '<div><div class="s-label">Change</div><div class="s-cgpa '+cls+'">'+(diff>=0?'+':'')+diff.toFixed(2)+'</div></div>' +
+      '<div><div class="s-label">Equiv %</div><div style="font-family:var(--font-mono);color:var(--amber)">'+(projCGPA*10).toFixed(1)+'%</div></div>' +
+      '<div></div>';
     cont.appendChild(row);
   }
-};
+}
 
-// ── SIMULATE ─────────────────────────────────
-window.simulateNext = ()=>{
-  const sg=parseFloat(document.getElementById('simSGPA').value);
-  if(isNaN(sg)||sg<0||sg>10){alert('Enter valid SGPA');return;}
-  const next=getSGPAs().findIndex(s=>s===null);
-  if(next===-1){alert('All semesters have data!');return;}
-  scenarios=scenarios.filter(s=>s.sem!==next);scenarios.push({sem:next,sgpa:sg});
-  switchTab('whatif');renderScenarios();
-};
+// ── SIMULATE ──────────────────────────────────
+function simulateNext(){
+  var sg = parseFloat(document.getElementById('simSGPA').value);
+  if(isNaN(sg)||sg<0||sg>10){ alert('Enter valid SGPA'); return; }
+  var sgpas = getSGPAs();
+  var next  = -1;
+  for(var i=0;i<8;i++){ if(sgpas[i]===null){ next=i; break; } }
+  if(next===-1){ alert('All semesters have data!'); return; }
+  scenarios = scenarios.filter(function(s){return s.sem!==next;});
+  scenarios.push({sem:next, sgpa:sg});
+  switchTab('whatif'); renderScenarios();
+}
 
-// ── PDF ───────────────────────────────────────
-window.exportPDF = ()=>{
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  const sgpas=getSGPAs();let total=0,cSum=0;
-  sgpas.forEach((s,i)=>{if(s!==null){total+=s*SEM_CREDITS[i];cSum+=SEM_CREDITS[i];}});
-  if(cSum===0){alert('Enter data first');return;}
-  const cgpa=total/cSum,pct=(cgpa*10).toFixed(1),remCr=TOTAL_CREDITS-cSum;
-  const maxCGPA=((total+remCr*10)/(cSum+remCr)).toFixed(2);const{cls}=getCGPARank(cgpa);
-  const name=userProfile?.name||'Student',enroll=userProfile?.enrollment||'–';
-  doc.setFillColor(13,17,23);doc.rect(0,0,210,297,'F');
-  doc.setFillColor(22,27,34);doc.rect(0,0,210,44,'F');
-  doc.setTextColor(0,229,255);doc.setFontSize(17);doc.setFont('helvetica','bold');
+// ── PDF EXPORT ────────────────────────────────
+function exportPDF(){
+  var jspdf = window.jspdf; var doc = new jspdf.jsPDF();
+  var sgpas=getSGPAs(), total=0, cSum=0;
+  sgpas.forEach(function(s,i){if(s!==null){total+=s*SEM_CREDITS[i];cSum+=SEM_CREDITS[i];}});
+  if(cSum===0){ alert('Enter data first'); return; }
+  var cgpa=total/cSum, pct=(cgpa*10).toFixed(1), remCr=TOTAL_CREDITS-cSum;
+  var maxCGPA=((total+remCr*10)/(cSum+remCr)).toFixed(2);
+  var cr=getCGPARank(cgpa);
+  var name=userProfile?userProfile.name:'Student', enroll=userProfile?userProfile.enrollment:'–';
+  doc.setFillColor(13,17,23); doc.rect(0,0,210,297,'F');
+  doc.setFillColor(22,27,34); doc.rect(0,0,210,44,'F');
+  doc.setTextColor(0,229,255); doc.setFontSize(17); doc.setFont('helvetica','bold');
   doc.text('CGPA Planner Pro — Academic Report',15,16);
-  doc.setFontSize(9);doc.setTextColor(139,148,158);
-  doc.text(`${name} | ${enroll} | JUET Guna CSE B.Tech | 160 Credits`,15,26);
+  doc.setFontSize(9); doc.setTextColor(139,148,158);
+  doc.text(name+' | '+enroll+' | JUET Guna CSE B.Tech',15,26);
   doc.text('Generated: '+new Date().toLocaleString('en-IN'),15,34);
-  [[10,'Current CGPA',cgpa.toFixed(2),'Equiv: '+pct+'%',[0,229,255]],[75,'Max Achievable',maxCGPA,'Sems: '+sgpas.filter(s=>s!==null).length+'/8',[57,211,83]],[140,'Division',cls,'CGPA '+cgpa.toFixed(2),[227,179,65]]].forEach(([x,lbl,val,sub,col])=>{
-    doc.setFillColor(28,35,51);doc.roundedRect(x,49,60,34,3,3,'F');
-    doc.setTextColor(...col);doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text(lbl,x+4,58);
-    doc.setFontSize(val.length>8?13:20);doc.text(val,x+4,70);
-    doc.setFontSize(8);doc.setTextColor(139,148,158);doc.text(sub,x+4,78);
+  [[10,'Current CGPA',cgpa.toFixed(2),'Equiv: '+pct+'%',[0,229,255]],[75,'Max Achievable',maxCGPA,'Sems: '+sgpas.filter(function(s){return s!==null;}).length+'/8',[57,211,83]],[140,'Division',cr.cls,'CGPA '+cgpa.toFixed(2),[227,179,65]]].forEach(function(b){
+    doc.setFillColor(28,35,51); doc.roundedRect(b[0],49,60,34,3,3,'F');
+    doc.setTextColor(b[4][0],b[4][1],b[4][2]); doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.text(b[1],b[0]+4,58);
+    doc.setFontSize(b[2].length>8?13:20); doc.text(b[2],b[0]+4,70);
+    doc.setFontSize(8); doc.setTextColor(139,148,158); doc.text(b[3],b[0]+4,78);
   });
-  let y=92;
-  doc.setTextColor(0,229,255);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text('Semester-wise Performance',15,y);y+=5;
-  doc.setFillColor(22,27,34);doc.rect(10,y,190,7,'F');
-  doc.setTextColor(139,148,158);doc.setFontSize(8);doc.setFont('helvetica','bold');
-  ['Semester','Credits','SGPA','Grade Points','Equiv %','Grade'].forEach((h,i)=>doc.text(h,12+i*31,y+5));y+=8;
-  sgpas.forEach((s,idx)=>{
+  var y=92;
+  doc.setTextColor(0,229,255); doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.text('Semester-wise Performance',15,y); y+=5;
+  doc.setFillColor(22,27,34); doc.rect(10,y,190,7,'F');
+  doc.setTextColor(139,148,158); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  ['Semester','Credits','SGPA','Grade Points','Equiv %','Grade'].forEach(function(h,i){doc.text(h,12+i*31,y+5);});
+  y+=8;
+  sgpas.forEach(function(s,idx){
     if(idx%2===0){doc.setFillColor(28,35,51);doc.rect(10,y-1,190,7,'F');}
-    doc.setTextColor(230,237,243);doc.setFont('helvetica','normal');doc.setFontSize(8);
-    [`Semester ${idx+1}`,`${SEM_CREDITS[idx]}`,s!==null?s.toFixed(2):'—',s!==null?(s*SEM_CREDITS[idx]).toFixed(2):'—',s!==null?(s*10).toFixed(1)+'%':'—',s!==null?getGradeLetter(s):'Pending'].forEach((v,j)=>doc.text(v,12+j*31,y+5));y+=8;
+    doc.setTextColor(230,237,243); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    ['Semester '+(idx+1),''+SEM_CREDITS[idx],s!==null?s.toFixed(2):'—',s!==null?(s*SEM_CREDITS[idx]).toFixed(2):'—',s!==null?(s*10).toFixed(1)+'%':'—',s!==null?getGradeLetter(s):'Pending'].forEach(function(v,j){doc.text(v,12+j*31,y+5);});
+    y+=8;
   });
-  doc.setTextColor(72,79,88);doc.setFontSize(8);doc.text('CGPA Planner Pro | JUET Guna | Powered by Firebase',15,288);
-  doc.save(`CGPA_${name.split(' ')[0]}_${new Date().toISOString().slice(0,10)}.pdf`);
+  doc.setTextColor(72,79,88); doc.setFontSize(8); doc.text('CGPA Planner Pro | JUET Guna | Powered by Firebase',15,288);
+  doc.save('CGPA_'+name.split(' ')[0]+'_'+new Date().toISOString().slice(0,10)+'.pdf');
   logActivity('PDF exported');
-};
+}
 
 // ── REFERENCE TABLE ───────────────────────────
-window.buildFullCreditTable = ()=>{
-  const tb=document.getElementById('full-credit-tbody');if(!tb)return;
-  let rows='';
-  CURRICULUM.forEach(sem=>{
-    sem.subjects.forEach((s,i)=>{
-      rows+=`<tr>${i===0?`<td rowspan="${sem.subjects.length}" style="color:var(--cyan);font-weight:700;vertical-align:top;padding-top:10px">S${sem.sem}</td>`:''}<td style="color:var(--text-dim);font-size:11px">${s.code}</td><td style="color:var(--text-muted)">${s.name}</td><td style="color:var(--cyan);font-weight:700;text-align:center">${s.credits}</td></tr>`;
+function buildFullCreditTable(){
+  var tb = document.getElementById('full-credit-tbody'); if(!tb) return;
+  var rows='';
+  CURRICULUM.forEach(function(sem){
+    sem.subjects.forEach(function(s,i){
+      rows += '<tr>'+(i===0?'<td rowspan="'+sem.subjects.length+'" style="color:var(--cyan);font-weight:700;vertical-align:top;padding-top:10px">S'+sem.sem+'</td>':'')+'<td style="color:var(--text-dim);font-size:11px">'+s.code+'</td><td style="color:var(--text-muted)">'+s.name+'</td><td style="color:var(--cyan);font-weight:700;text-align:center">'+s.credits+'</td></tr>';
     });
-    rows+=`<tr><td colspan="4" style="border-bottom:2px solid var(--border);padding:2px 12px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">Sem ${sem.sem} total: ${sem.credits} credits</td></tr>`;
+    rows += '<tr><td colspan="4" style="border-bottom:2px solid var(--border);padding:2px 12px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">Sem '+sem.sem+' total: '+sem.credits+' credits</td></tr>';
   });
-  tb.innerHTML=rows;
-};
+  tb.innerHTML = rows;
+}
 
 // ── ACTIVITY LOG ──────────────────────────────
-async function loadActivityLog(){
-  if(!currentUser||!userProfile) return;
-  const snap=await getDoc(doc(db,'users',currentUser.uid));
-  if(!snap.exists()) return;
-  const log=(snap.data().activity||[]).reverse().slice(0,10);
-  const cont=document.getElementById('activity-list');
-  if(!log.length){cont.innerHTML='<div class="empty-state" style="padding:16px"><span>📋</span>No activity yet</div>';return;}
-  cont.innerHTML=log.map(a=>`<div class="activity-item"><span>${a.msg}</span><span class="activity-time">${a.time}</span></div>`).join('');
+function loadActivityLog(){
+  if(!currentUser) return;
+  db.collection('users').doc(currentUser.uid).get().then(function(snap){
+    if(!snap.exists) return;
+    var log = (snap.data().activity||[]).reverse().slice(0,10);
+    var cont = document.getElementById('activity-list');
+    if(!log.length){ cont.innerHTML='<div class="empty-state" style="padding:16px"><span>📋</span>No activity yet</div>'; return; }
+    cont.innerHTML = log.map(function(a){
+      return '<div class="activity-item"><span>'+a.msg+'</span><span class="activity-time">'+a.time+'</span></div>';
+    }).join('');
+  });
 }
 
 // ── RESET DATA ────────────────────────────────
-window.doResetData = async ()=>{
-  quickSGPA=Array(8).fill('');semData=freshSemData();scenarios=[];
+function doResetData(){
+  quickSGPA = ['','','','','','','','']; semData=freshSemData(); scenarios=[];
   document.getElementById('targetCGPA').value='';
   document.getElementById('resultsSection').style.display='none';
-  ['sc-cgpa','sc-best'].forEach(id=>document.getElementById(id).textContent='—');
+  set('sc-cgpa','—','stat-value'); set('sc-best','—','stat-value');
   document.getElementById('sc-done').textContent='0';
   document.getElementById('sc-rank').textContent='–';
   document.getElementById('sc-rank-sub').textContent='Enter data first';
-  closeModal('modal-reset-data');
-  buildSemGrid();
-  await saveData(true);
-  showToast('↺ Data reset.','info');
-};
+  closeModal('modal-reset-data'); buildSemGrid();
+  saveData(true).then(function(){ showToast('↺ Data reset.','info'); });
+}
 
 // ── UI HELPERS ────────────────────────────────
+function set(id, text, cls){
+  var el=document.getElementById(id); if(!el)return;
+  el.textContent=text; if(cls) el.className=cls;
+}
 function setSaveDot(state){
-  const dot=document.getElementById('save-dot'),lbl=document.getElementById('save-label');
+  var dot=document.getElementById('save-dot'), lbl=document.getElementById('save-label');
   if(!dot||!lbl) return;
   dot.className='save-dot'+(state==='saving'?' saving':state==='error'?' error':'');
-  lbl.textContent=state==='saving'?'Saving…':state==='error'?'Error':'Saved';
+  lbl.textContent = state==='saving'?'Saving…':state==='error'?'Error':'Saved';
 }
-window.setSaveDot = setSaveDot;
-
-window.showToast = (msg,type='info')=>{
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className=`toast show ${type}`;
-  setTimeout(()=>t.className='toast',3200);
-};
-function showToast(msg,type){window.showToast(msg,type);}
-
-function showErr(el,msg){el.textContent=msg;el.classList.add('show');}
-
-function firebaseErrMsg(code){
-  const map={'auth/invalid-email':'Invalid email address.','auth/user-not-found':'No account found with this email.','auth/wrong-password':'Incorrect password.','auth/email-already-in-use':'An account with this email already exists.','auth/weak-password':'Password must be at least 6 characters.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/network-request-failed':'Network error. Check your connection.','auth/invalid-credential':'Invalid email or password.'};
+function showToast(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type||'info');
+  setTimeout(function(){t.className='toast';}, 3200);
+}
+function showErr(el, msg){ el.textContent=msg; el.classList.add('show'); }
+function fbErr(code){
+  var map={'auth/invalid-email':'Invalid email address.','auth/user-not-found':'No account with this email.','auth/wrong-password':'Incorrect password.','auth/email-already-in-use':'Email already in use.','auth/weak-password':'Password must be at least 6 characters.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'Network error. Check connection.','auth/invalid-credential':'Invalid email or password.'};
   return map[code]||'Something went wrong. Please try again.';
 }
+function toggleDropdown(){ document.getElementById('profileDropdown').classList.toggle('open'); }
+function closeDropdown(){  document.getElementById('profileDropdown').classList.remove('open'); }
+document.addEventListener('click',function(e){if(!e.target.closest('.user-pill')&&!e.target.closest('.profile-dropdown')) closeDropdown();});
+function openModal(id){  document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
-window.toggleDropdown = ()=>document.getElementById('profileDropdown').classList.toggle('open');
-window.closeDropdown  = ()=>document.getElementById('profileDropdown').classList.remove('open');
-document.addEventListener('click',e=>{if(!e.target.closest('.user-pill')&&!e.target.closest('.profile-dropdown')) closeDropdown();});
-
-window.openModal  = (id)=>document.getElementById(id).classList.add('open');
-window.closeModal = (id)=>document.getElementById(id).classList.remove('open');
-
-window.switchTab = (name)=>{
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
   document.getElementById('tab-'+name).classList.add('active');
-  const idx={entry:0,analysis:1,whatif:2,reference:3,profile:4}[name];
+  var idx={entry:0,analysis:1,whatif:2,reference:3,profile:4}[name];
   document.querySelectorAll('.tab-btn')[idx].classList.add('active');
   if(name==='analysis') liveUpdate();
-  if(name==='whatif') renderScenarios();
+  if(name==='whatif')   renderScenarios();
   if(name==='reference') buildFullCreditTable();
-  if(name==='profile') loadActivityLog();
-};
+  if(name==='profile')   loadActivityLog();
+}
 
-// Enter key on auth forms
-document.addEventListener('keydown',e=>{
+document.addEventListener('keydown',function(e){
   if(e.key!=='Enter') return;
-  if(document.getElementById('auth-login').style.display!=='none') doLogin();
-  else if(document.getElementById('auth-register').style.display!=='none') doRegister();
+  var loginVisible = document.getElementById('auth-login').style.display!=='none';
+  var regVisible   = document.getElementById('auth-register').style.display!=='none';
+  if(loginVisible) doLogin();
+  else if(regVisible) doRegister();
 });
 
-// ── HELPERS ──────────────────────────────────
-function cgpaColor(v){return v>=9?'good':v>=7?'':v>=5.5?'warn':'bad';}
+// ── HELPERS ───────────────────────────────────
+function cgpaColor(v){ return v>=9?'good':v>=7?'':v>=5.5?'warn':'bad'; }
 function getCGPARank(c){
-  if(c>=9)return{rank:'rank-O',cls:'Outstanding'};if(c>=8)return{rank:'rank-O',cls:'Excellent'};
-  if(c>=7)return{rank:'rank-A',cls:'Very Good'};if(c>=6)return{rank:'rank-A',cls:'Good'};
-  if(c>=5)return{rank:'rank-B',cls:'Average'};return{rank:'rank-C',cls:'Below Par'};
+  if(c>=9) return{rank:'rank-O',cls:'Outstanding'};
+  if(c>=8) return{rank:'rank-O',cls:'Excellent'};
+  if(c>=7) return{rank:'rank-A',cls:'Very Good'};
+  if(c>=6) return{rank:'rank-A',cls:'Good'};
+  if(c>=5) return{rank:'rank-B',cls:'Average'};
+  return{rank:'rank-C',cls:'Below Par'};
 }
 function getGradeLetter(s){
   if(s>=9.5)return'O';if(s>=8.5)return'A+';if(s>=7.5)return'A';
