@@ -8,456 +8,836 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  :root {
-    --bg:#0d1117; --surface:#161b22; --surface2:#1c2333; --surface3:#21262d;
-    --border:#30363d; --cyan:#00e5ff; --cyan-dim:#00b8cc;
-    --green:#39d353; --amber:#e3b341; --red:#f85149;
-    --text:#e6edf3; --text-muted:#8b949e; --text-dim:#484f58;
-    --font-mono:'Space Mono',monospace; --font-sans:'DM Sans',sans-serif;
-    --radius:12px; --radius-sm:8px; --glow:0 0 20px rgba(0,229,255,0.15);
-  }
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 60px;}
-  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
-  .app-shell{position:relative;z-index:1;max-width:960px;margin:0 auto;}
-  .header{text-align:center;margin-bottom:36px;animation:fadeDown .6s ease both;}
-  .header-badge{display:inline-block;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--cyan);font-family:var(--font-mono);font-size:11px;letter-spacing:2px;padding:4px 14px;border-radius:20px;margin-bottom:12px;}
-  .header h1{font-size:clamp(26px,5vw,42px);font-weight:700;line-height:1.1;letter-spacing:-1px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-  .header p{color:var(--text-muted);font-size:14px;margin-top:8px;}
-  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;animation:fadeUp .5s .1s ease both;}
-  @media(max-width:640px){.stats-row{grid-template-columns:repeat(2,1fr);}}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;}
-  .stat-card:hover{border-color:var(--cyan-dim);transform:translateY(-2px);}
-  .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s;}
-  .stat-card:hover::after{opacity:1;}
-  .stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-mono);margin-bottom:8px;}
-  .stat-value{font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--cyan);line-height:1;}
-  .stat-value.good{color:var(--green);}.stat-value.warn{color:var(--amber);}.stat-value.bad{color:var(--red);}
-  .stat-sub{font-size:11px;color:var(--text-dim);margin-top:4px;}
-  .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:20px;animation:fadeUp .5s .15s ease both;}
-  .tab-btn{flex:1;padding:9px 16px;border:none;background:transparent;color:var(--text-muted);font-family:var(--font-sans);font-size:13px;font-weight:500;border-radius:var(--radius-sm);cursor:pointer;transition:all .2s;}
-  .tab-btn.active{background:var(--surface3);color:var(--cyan);box-shadow:var(--glow);}
-  .tab-btn:hover:not(.active){color:var(--text);background:var(--surface2);}
-  .tab-panel{display:none;animation:fadeIn .3s ease;}
-  .tab-panel.active{display:block;}
-  .entry-mode-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;flex-wrap:wrap;}
-  .entry-mode-bar span{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);}
-  .mode-toggle{display:flex;background:var(--surface3);border-radius:6px;padding:3px;gap:3px;margin-left:auto;}
-  .mode-btn{padding:5px 14px;border:none;border-radius:4px;background:transparent;color:var(--text-muted);font-size:12px;font-family:var(--font-mono);cursor:pointer;transition:all .2s;}
-  .mode-btn.active{background:var(--cyan);color:#000;font-weight:700;}
-  .sem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px;animation:fadeUp .5s .2s ease both;}
-  @media(max-width:600px){.sem-grid{grid-template-columns:1fr;}}
-  .sem-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s;}
-  .sem-card.has-data{border-color:rgba(0,229,255,.25);}
-  .sem-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);cursor:pointer;user-select:none;}
-  .sem-title{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cyan);}
-  .sem-credits-badge{font-size:10px;color:var(--text-dim);margin-top:2px;}
-  .sem-sgpa-display{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--green);}
-  .sem-sgpa-display.empty{color:var(--text-dim);font-size:12px;}
-  .sem-toggle{color:var(--text-muted);font-size:12px;transition:transform .2s;}
-  .sem-card.open .sem-toggle{transform:rotate(180deg);}
-  .sem-body{max-height:0;overflow:hidden;transition:max-height .4s ease;}
-  .sem-card.open .sem-body{max-height:800px;}
-  .sem-body-inner{padding:16px;}
-  .quick-sgpa-wrap{display:flex;align-items:center;gap:12px;padding:8px 0;}
-  .quick-sgpa-wrap label{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);white-space:nowrap;}
-  .quick-inp{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:var(--font-mono);font-size:20px;font-weight:700;padding:8px 12px;width:120px;text-align:center;outline:none;transition:border-color .2s,box-shadow .2s;}
-  .quick-inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
-  .quick-subjects{margin-top:12px;display:flex;flex-direction:column;gap:4px;}
-  .quick-subject-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:4px;background:var(--surface2);}
-  .quick-subject-name{font-size:11px;color:var(--text-muted);}
-  .quick-subject-code{font-size:10px;color:var(--text-dim);font-family:var(--font-mono);}
-  .quick-subject-cr{font-size:11px;color:var(--cyan);font-family:var(--font-mono);font-weight:700;}
-  .subject-row{display:grid;grid-template-columns:1fr 55px 80px 55px;gap:8px;align-items:center;margin-bottom:7px;font-size:13px;}
-  .subject-row.header-row{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-mono);margin-bottom:5px;}
-  .inp{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:13px;padding:6px 8px;width:100%;text-align:center;transition:border-color .2s,box-shadow .2s;outline:none;}
-  .inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
-  .inp.name-inp{text-align:left;font-family:var(--font-sans);font-size:12px;}
-  .grade-select{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:var(--font-mono);font-size:12px;padding:6px 4px;width:100%;text-align:center;outline:none;cursor:pointer;transition:border-color .2s;}
-  .grade-select:focus{border-color:var(--cyan);}
-  .sgpa-result-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
-  .sgpa-label{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);}
-  .sgpa-val{font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--green);}
-  .add-subject-btn{background:transparent;border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);font-size:12px;padding:6px;width:100%;cursor:pointer;margin-top:6px;transition:all .2s;}
-  .add-subject-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.05);}
-  .clear-btn{background:transparent;border:none;color:var(--text-dim);font-size:11px;font-family:var(--font-mono);cursor:pointer;padding:2px 6px;border-radius:4px;transition:all .2s;}
-  .clear-btn:hover{color:var(--red);}
-  .audit-note{font-size:10px;color:var(--text-dim);font-family:var(--font-mono);margin-top:8px;padding:5px 8px;border-left:2px solid var(--border);font-style:italic;}
-  .controls-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;animation:fadeUp .5s .25s ease both;}
-  .controls-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;}
-  .controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  @media(max-width:500px){.controls-grid{grid-template-columns:1fr;}}
-  .field-group label{display:block;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
-  .field-group .inp{width:100%;text-align:left;}
-  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
-  .btn{padding:10px 20px;border:none;border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px;}
-  .btn-primary{background:var(--cyan);color:#000;}
-  .btn-primary:hover{background:var(--cyan-dim);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,255,.3);}
-  .btn-secondary{background:var(--surface3);color:var(--text);border:1px solid var(--border);}
-  .btn-secondary:hover{border-color:var(--cyan);color:var(--cyan);}
-  .btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border);}
-  .btn-ghost:hover{color:var(--text);border-color:var(--text-muted);}
-  .progress-section{margin-bottom:20px;}
-  .progress-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px;}
-  .progress-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
-  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1);}
-  .result-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
-  .result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
-  @media(max-width:500px){.result-grid{grid-template-columns:1fr;}}
-  .r-label{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
-  .r-val{font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--text);}
-  .r-val.cyan{color:var(--cyan);}.r-val.green{color:var(--green);}.r-val.amber{color:var(--amber);}.r-val.red{color:var(--red);}
-  .status-banner{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;margin-top:12px;display:flex;align-items:center;gap:8px;}
-  .status-banner.achievable{background:rgba(57,211,83,.1);border:1px solid rgba(57,211,83,.3);color:var(--green);}
-  .status-banner.warning{background:rgba(227,179,65,.1);border:1px solid rgba(227,179,65,.3);color:var(--amber);}
-  .status-banner.impossible{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red);}
-  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
-  .chart-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;}
-  .chart-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
-  .chart-tab{padding:4px 12px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-family:var(--font-mono);transition:all .2s;}
-  .chart-tab.active{background:rgba(0,229,255,.1);border-color:var(--cyan);color:var(--cyan);}
-  .whatif-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
-  .whatif-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;}
-  .whatif-desc{font-size:12px;color:var(--text-dim);margin-bottom:16px;}
-  .scenarios-list{display:flex;flex-direction:column;gap:10px;}
-  .scenario-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;}
-  .scenario-row.result-row-scenario{background:rgba(0,229,255,.04);border-color:rgba(0,229,255,.2);}
-  .s-label{color:var(--text-muted);font-size:11px;font-family:var(--font-mono);}
-  .s-val{font-family:var(--font-mono);font-weight:700;color:var(--cyan);}
-  .s-cgpa{font-family:var(--font-mono);font-weight:700;font-size:16px;}
-  .s-cgpa.up{color:var(--green);}.s-cgpa.same{color:var(--amber);}.s-cgpa.down{color:var(--red);}
-  .del-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);width:28px;height:28px;cursor:pointer;font-size:14px;transition:all .2s;display:flex;align-items:center;justify-content:center;}
-  .del-btn:hover{border-color:var(--red);color:var(--red);}
-  .grade-ref-table{width:100%;border-collapse:collapse;font-size:13px;}
-  .grade-ref-table th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--font-mono);letter-spacing:1px;color:var(--text-muted);border-bottom:1px solid var(--border);text-transform:uppercase;}
-  .grade-ref-table td{padding:8px 12px;border-bottom:1px solid rgba(48,54,61,.5);font-family:var(--font-mono);}
-  .grade-ref-table tr:hover td{background:var(--surface2);}
-  .rank-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--font-mono);font-weight:700;letter-spacing:1px;}
-  .rank-O{background:rgba(0,229,255,.15);color:var(--cyan);border:1px solid rgba(0,229,255,.3);}
-  .rank-A{background:rgba(57,211,83,.15);color:var(--green);border:1px solid rgba(57,211,83,.3);}
-  .rank-B{background:rgba(227,179,65,.15);color:var(--amber);border:1px solid rgba(227,179,65,.3);}
-  .rank-C{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3);}
-  .divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
-  .empty-state{text-align:center;padding:30px;color:var(--text-dim);font-size:13px;}
-  .empty-state span{font-size:32px;display:block;margin-bottom:8px;}
-  .footer{text-align:center;font-size:12px;color:var(--text-dim);margin-top:40px;font-family:var(--font-mono);}
-  ::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:var(--surface);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-  @keyframes fadeDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,255,.4)}50%{box-shadow:0 0 0 8px rgba(0,229,255,0)}}
-  .pulse{animation:pulse 2s infinite;}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--surface3:#21262d;
+  --border:#30363d;--cyan:#00e5ff;--cyan-dim:#00b8cc;
+  --green:#39d353;--amber:#e3b341;--red:#f85149;--purple:#a371f7;
+  --text:#e6edf3;--text-muted:#8b949e;--text-dim:#484f58;
+  --font-mono:'Space Mono',monospace;--font-sans:'DM Sans',sans-serif;
+  --radius:12px;--radius-sm:8px;--glow:0 0 20px rgba(0,229,255,0.15);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--bg);}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:420px;position:relative;}
+.auth-box::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);border-radius:2px;}
+.auth-logo{text-align:center;margin-bottom:28px;}
+.auth-logo h1{font-size:24px;font-weight:700;letter-spacing:-0.5px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-logo p{font-size:12px;color:var(--text-muted);margin-top:6px;}
+.auth-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;margin-bottom:24px;}
+.auth-tab{flex:1;padding:8px;border:none;background:transparent;color:var(--text-muted);font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;transition:all .2s;font-family:var(--font-sans);}
+.auth-tab.active{background:var(--surface3);color:var(--cyan);}
+.auth-field{margin-bottom:16px;}
+.auth-field label{display:block;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-sans);font-size:14px;padding:10px 14px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.auth-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
+.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--cyan);color:#000;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--font-sans);margin-top:4px;}
+.auth-btn:hover{background:var(--cyan-dim);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,255,.3);}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.auth-err{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:10px;display:none;}
+.auth-err.show{display:block;}
+.auth-note{font-size:11px;color:var(--text-dim);text-align:center;margin-top:16px;}
+
+/* ── TOP NAV ── */
+#app-screen{display:none;min-height:100vh;padding-bottom:60px;}
+.topnav{position:sticky;top:0;z-index:50;background:rgba(13,17,23,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
+.topnav-brand{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--cyan);}
+.topnav-brand span{color:var(--text-muted);font-weight:400;}
+.topnav-right{display:flex;align-items:center;gap:10px;}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 5px;cursor:pointer;transition:border-color .2s;}
+.user-pill:hover{border-color:var(--cyan);}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;}
+.user-name{font-size:12px;color:var(--text);font-weight:500;}
+.save-indicator{font-size:11px;font-family:var(--font-mono);color:var(--text-dim);display:flex;align-items:center;gap:5px;}
+.save-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.save-dot.saving{background:var(--amber);animation:pulse-dot .8s infinite;}
+.save-dot.error{background:var(--red);}
+
+/* ── MAIN LAYOUT ── */
+.app-shell{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:24px 16px;}
+
+/* ── PROFILE DROPDOWN ── */
+.profile-dropdown{position:absolute;top:54px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;min-width:220px;z-index:200;display:none;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.profile-dropdown.open{display:block;}
+.pd-header{padding:10px 12px 12px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.pd-name{font-weight:600;font-size:14px;}
+.pd-email{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.pd-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text-muted);transition:all .2s;}
+.pd-item:hover{background:var(--surface2);color:var(--text);}
+.pd-item.danger:hover{background:rgba(248,81,73,.1);color:var(--red);}
+
+/* ── STATS ── */
+.header{text-align:center;margin-bottom:28px;}
+.header-badge{display:inline-block;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--cyan);font-family:var(--font-mono);font-size:11px;letter-spacing:2px;padding:4px 14px;border-radius:20px;margin-bottom:10px;}
+.header h2{font-size:clamp(22px,4vw,34px);font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+@media(max-width:640px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;}
+.stat-card:hover{border-color:var(--cyan-dim);transform:translateY(-2px);}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s;}
+.stat-card:hover::after{opacity:1;}
+.stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-mono);margin-bottom:8px;}
+.stat-value{font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--cyan);line-height:1;}
+.stat-value.good{color:var(--green);}.stat-value.warn{color:var(--amber);}.stat-value.bad{color:var(--red);}
+.stat-sub{font-size:11px;color:var(--text-dim);margin-top:4px;}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:20px;flex-wrap:wrap;}
+.tab-btn{flex:1;padding:9px 12px;border:none;background:transparent;color:var(--text-muted);font-family:var(--font-sans);font-size:13px;font-weight:500;border-radius:var(--radius-sm);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.tab-btn.active{background:var(--surface3);color:var(--cyan);box-shadow:var(--glow);}
+.tab-btn:hover:not(.active){color:var(--text);background:var(--surface2);}
+.tab-panel{display:none;animation:fadeIn .3s ease;}
+.tab-panel.active{display:block;}
+
+/* ── ENTRY MODE ── */
+.entry-mode-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;flex-wrap:wrap;}
+.entry-mode-bar span{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);}
+.mode-toggle{display:flex;background:var(--surface3);border-radius:6px;padding:3px;gap:3px;margin-left:auto;}
+.mode-btn{padding:5px 14px;border:none;border-radius:4px;background:transparent;color:var(--text-muted);font-size:12px;font-family:var(--font-mono);cursor:pointer;transition:all .2s;}
+.mode-btn.active{background:var(--cyan);color:#000;font-weight:700;}
+
+/* ── SEM CARDS ── */
+.sem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px;}
+@media(max-width:600px){.sem-grid{grid-template-columns:1fr;}}
+.sem-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s;}
+.sem-card.has-data{border-color:rgba(0,229,255,.25);}
+.sem-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);cursor:pointer;user-select:none;}
+.sem-title{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--cyan);}
+.sem-credits-badge{font-size:10px;color:var(--text-dim);margin-top:2px;}
+.sem-sgpa-display{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--green);}
+.sem-sgpa-display.empty{color:var(--text-dim);font-size:12px;}
+.sem-toggle{color:var(--text-muted);font-size:12px;transition:transform .2s;}
+.sem-card.open .sem-toggle{transform:rotate(180deg);}
+.sem-body{max-height:0;overflow:hidden;transition:max-height .4s ease;}
+.sem-card.open .sem-body{max-height:900px;}
+.sem-body-inner{padding:16px;}
+.quick-sgpa-wrap{display:flex;align-items:center;gap:12px;padding:8px 0;}
+.quick-sgpa-wrap label{font-size:12px;color:var(--text-muted);font-family:var(--font-mono);white-space:nowrap;}
+.quick-inp{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:var(--font-mono);font-size:20px;font-weight:700;padding:8px 12px;width:120px;text-align:center;outline:none;transition:border-color .2s,box-shadow .2s;}
+.quick-inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
+.quick-subjects{margin-top:12px;display:flex;flex-direction:column;gap:4px;}
+.quick-subject-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:4px;background:var(--surface2);}
+.quick-subject-name{font-size:11px;color:var(--text-muted);}
+.quick-subject-code{font-size:10px;color:var(--text-dim);font-family:var(--font-mono);}
+.quick-subject-cr{font-size:11px;color:var(--cyan);font-family:var(--font-mono);font-weight:700;}
+.subject-row{display:grid;grid-template-columns:1fr 55px 80px 55px;gap:8px;align-items:center;margin-bottom:7px;font-size:13px;}
+.subject-row.header-row{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-mono);margin-bottom:5px;}
+.inp{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:13px;padding:6px 8px;width:100%;text-align:center;transition:border-color .2s,box-shadow .2s;outline:none;}
+.inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
+.inp.name-inp{text-align:left;font-family:var(--font-sans);font-size:12px;}
+.grade-select{background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:var(--font-mono);font-size:12px;padding:6px 4px;width:100%;outline:none;cursor:pointer;transition:border-color .2s;}
+.grade-select:focus{border-color:var(--cyan);}
+.sgpa-result-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.sgpa-label{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);}
+.sgpa-val{font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--green);}
+.add-subject-btn{background:transparent;border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);font-size:12px;padding:6px;width:100%;cursor:pointer;margin-top:6px;transition:all .2s;}
+.add-subject-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.05);}
+.clear-btn{background:transparent;border:none;color:var(--text-dim);font-size:11px;font-family:var(--font-mono);cursor:pointer;padding:2px 6px;border-radius:4px;transition:all .2s;}
+.clear-btn:hover{color:var(--red);}
+.audit-note{font-size:10px;color:var(--text-dim);font-family:var(--font-mono);margin-top:8px;padding:5px 8px;border-left:2px solid var(--border);font-style:italic;}
+
+/* ── CONTROLS ── */
+.controls-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.controls-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;}
+.controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:500px){.controls-grid{grid-template-columns:1fr;}}
+.field-group label{display:block;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.field-group .inp{width:100%;text-align:left;}
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+.btn{padding:10px 20px;border:none;border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px;}
+.btn-primary{background:var(--cyan);color:#000;}
+.btn-primary:hover{background:var(--cyan-dim);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,255,.3);}
+.btn-secondary{background:var(--surface3);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--cyan);color:var(--cyan);}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--text-muted);}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(248,81,73,.3);}
+.btn-danger:hover{background:rgba(248,81,73,.1);}
+
+/* ── PROGRESS ── */
+.progress-section{margin-bottom:20px;}
+.progress-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px;}
+.progress-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1);}
+
+/* ── RESULT BOX ── */
+.result-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+@media(max-width:500px){.result-grid{grid-template-columns:1fr;}}
+.r-label{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.r-val{font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--text);}
+.r-val.cyan{color:var(--cyan);}.r-val.green{color:var(--green);}.r-val.amber{color:var(--amber);}.r-val.red{color:var(--red);}
+.status-banner{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;margin-top:12px;display:flex;align-items:center;gap:8px;}
+.status-banner.achievable{background:rgba(57,211,83,.1);border:1px solid rgba(57,211,83,.3);color:var(--green);}
+.status-banner.warning{background:rgba(227,179,65,.1);border:1px solid rgba(227,179,65,.3);color:var(--amber);}
+.status-banner.impossible{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red);}
+
+/* ── CHARTS ── */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.chart-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;}
+.chart-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.chart-tab{padding:4px 12px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-family:var(--font-mono);transition:all .2s;}
+.chart-tab.active{background:rgba(0,229,255,.1);border-color:var(--cyan);color:var(--cyan);}
+
+/* ── WHAT-IF ── */
+.whatif-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.whatif-title{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;}
+.whatif-desc{font-size:12px;color:var(--text-dim);margin-bottom:16px;}
+.scenarios-list{display:flex;flex-direction:column;gap:10px;}
+.scenario-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;}
+.scenario-row.result-row-scenario{background:rgba(0,229,255,.04);border-color:rgba(0,229,255,.2);}
+.s-label{color:var(--text-muted);font-size:11px;font-family:var(--font-mono);}
+.s-val{font-family:var(--font-mono);font-weight:700;color:var(--cyan);}
+.s-cgpa{font-family:var(--font-mono);font-weight:700;font-size:16px;}
+.s-cgpa.up{color:var(--green);}.s-cgpa.same{color:var(--amber);}.s-cgpa.down{color:var(--red);}
+.del-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);width:28px;height:28px;cursor:pointer;font-size:14px;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.del-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* ── PROFILE TAB ── */
+.profile-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
+.profile-avatar-large{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#000;margin:0 auto 16px;}
+.profile-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+@media(max-width:500px){.profile-info-grid{grid-template-columns:1fr;}}
+.info-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;}
+.info-item .r-label{margin-bottom:6px;}
+.info-item .r-val{font-size:15px;}
+.activity-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.activity-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:6px;padding:8px 12px;font-size:12px;}
+.activity-time{color:var(--text-dim);font-family:var(--font-mono);}
+
+/* ── GRADE REF TABLE ── */
+.grade-ref-table{width:100%;border-collapse:collapse;font-size:13px;}
+.grade-ref-table th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--font-mono);letter-spacing:1px;color:var(--text-muted);border-bottom:1px solid var(--border);text-transform:uppercase;}
+.grade-ref-table td{padding:8px 12px;border-bottom:1px solid rgba(48,54,61,.5);font-family:var(--font-mono);}
+.grade-ref-table tr:hover td{background:var(--surface2);}
+
+/* ── RANK BADGE ── */
+.rank-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--font-mono);font-weight:700;letter-spacing:1px;}
+.rank-O{background:rgba(0,229,255,.15);color:var(--cyan);border:1px solid rgba(0,229,255,.3);}
+.rank-A{background:rgba(57,211,83,.15);color:var(--green);border:1px solid rgba(57,211,83,.3);}
+.rank-B{background:rgba(227,179,65,.15);color:var(--amber);border:1px solid rgba(227,179,65,.3);}
+.rank-C{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-color:rgba(57,211,83,.4);color:var(--green);}
+.toast.error{border-color:rgba(248,81,73,.4);color:var(--red);}
+.toast.info{border-color:rgba(0,229,255,.3);color:var(--cyan);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:400px;}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end;}
+
+/* ── MISC ── */
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.empty-state{text-align:center;padding:30px;color:var(--text-dim);font-size:13px;}
+.empty-state span{font-size:32px;display:block;margin-bottom:8px;}
+.footer{text-align:center;font-size:12px;color:var(--text-dim);margin-top:40px;font-family:var(--font-mono);}
+::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:var(--surface);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,255,.4)}50%{box-shadow:0 0 0 8px rgba(0,229,255,0)}}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+.pulse{animation:pulse 2s infinite;}
 </style>
 </head>
 <body>
-<div class="app-shell">
 
-  <div class="header">
-    <div class="header-badge">JUET GUNA · CSE · B.TECH · 8 SEMESTERS · 160 CREDITS</div>
-    <h1>CGPA Planner Pro</h1>
-    <p>Jaypee University of Engineering and Technology, Guna — Dept. of CSE</p>
-  </div>
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <h1>CGPA Planner Pro</h1>
+      <p>JUET Guna · CSE B.Tech · 160 Credits</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="showAuthTab('register')">Create Account</button>
+    </div>
 
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Current CGPA</div>
-      <div class="stat-value" id="sc-cgpa">—</div>
-      <div class="stat-sub" id="sc-cgpa-sub">No data yet</div>
+    <!-- LOGIN -->
+    <div id="auth-login">
+      <div class="auth-field"><label>Username</label><input class="auth-input" id="login-user" type="text" placeholder="your_username" autocomplete="username"/></div>
+      <div class="auth-field"><label>Password</label><input class="auth-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
+      <button class="auth-btn" onclick="doLogin()">Sign In →</button>
+      <div class="auth-err" id="login-err"></div>
+      <div class="auth-note">Data saved securely per account · Works across sessions</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Sems Done</div>
-      <div class="stat-value" id="sc-done">0</div>
-      <div class="stat-sub">of 8 semesters</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Best SGPA</div>
-      <div class="stat-value" id="sc-best">—</div>
-      <div class="stat-sub" id="sc-best-sub">–</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Division</div>
-      <div class="stat-value" id="sc-rank" style="font-size:18px">–</div>
-      <div class="stat-sub" id="sc-rank-sub">Enter data first</div>
-    </div>
-  </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('entry')">📝 Grade Entry</button>
-    <button class="tab-btn" onclick="switchTab('analysis')">📊 Analysis</button>
-    <button class="tab-btn" onclick="switchTab('whatif')">🔮 What-If</button>
-    <button class="tab-btn" onclick="switchTab('reference')">📖 Reference</button>
-  </div>
-
-  <!-- GRADE ENTRY TAB -->
-  <div class="tab-panel active" id="tab-entry">
-    <div class="entry-mode-bar">
-      <span>📋 Input Mode:</span>
-      <div class="mode-toggle">
-        <button class="mode-btn active" id="mode-btn-quick" onclick="setMode('quick')">Quick SGPA</button>
-        <button class="mode-btn" id="mode-btn-detailed" onclick="setMode('detailed')">Subject-wise</button>
-      </div>
-    </div>
-    <div class="sem-grid" id="semGrid"></div>
-    <div class="controls-panel">
-      <div class="controls-title">⚙ Target & Simulation</div>
-      <div class="controls-grid">
-        <div class="field-group">
-          <label>Target CGPA</label>
-          <input class="inp" type="number" id="targetCGPA" step="0.01" min="0" max="10" placeholder="e.g. 8.50" oninput="liveUpdate()"/>
-        </div>
-        <div class="field-group">
-          <label>Simulate Next Sem SGPA</label>
-          <input class="inp" type="number" id="simSGPA" step="0.01" min="0" max="10" placeholder="e.g. 9.00"/>
-        </div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary pulse" onclick="calculate()">⚡ Calculate</button>
-        <button class="btn btn-secondary" onclick="simulateNext()">🔮 Simulate Next Sem</button>
-        <button class="btn btn-secondary" onclick="exportPDF()">📄 Export PDF</button>
-        <button class="btn btn-ghost" onclick="resetAll()">↺ Reset All</button>
-      </div>
-    </div>
-    <div id="resultsSection" style="display:none">
-      <div class="result-box">
-        <div class="controls-title">📈 Results</div>
-        <div class="result-grid">
-          <div><div class="r-label">Current CGPA</div><div class="r-val cyan" id="r-cgpa">—</div></div>
-          <div><div class="r-label">Max Achievable CGPA</div><div class="r-val green" id="r-max">—</div></div>
-          <div><div class="r-label">Avg SGPA Needed (Remaining)</div><div class="r-val" id="r-avg">—</div></div>
-          <div><div class="r-label">SGPA Needed Next Sem</div><div class="r-val" id="r-next">—</div></div>
-          <div><div class="r-label">Credits Done</div><div class="r-val" id="r-credits">—</div></div>
-          <div><div class="r-label">Grade Points Earned</div><div class="r-val" id="r-gp">—</div></div>
-        </div>
-        <div id="r-status"></div>
-        <hr class="divider"/>
-        <div class="progress-section">
-          <div class="progress-meta"><span>Progress to Target</span><span id="r-progress-pct">0%</span></div>
-          <div class="progress-track"><div class="progress-fill" id="r-bar"></div></div>
-        </div>
-        <div id="r-strategy" style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-top:8px;line-height:1.8;"></div>
-      </div>
+    <!-- REGISTER -->
+    <div id="auth-register" style="display:none">
+      <div class="auth-field"><label>Full Name</label><input class="auth-input" id="reg-name" type="text" placeholder="Abhinavkumar Singh"/></div>
+      <div class="auth-field"><label>Username</label><input class="auth-input" id="reg-user" type="text" placeholder="abhinav_123" autocomplete="username"/></div>
+      <div class="auth-field"><label>Enrollment No.</label><input class="auth-input" id="reg-enroll" type="text" placeholder="e.g. 0901CS211001"/></div>
+      <div class="auth-field"><label>Password</label><input class="auth-input" id="reg-pass" type="password" placeholder="min 6 characters" autocomplete="new-password"/></div>
+      <button class="auth-btn" onclick="doRegister()">Create Account →</button>
+      <div class="auth-err" id="reg-err"></div>
     </div>
   </div>
-
-  <!-- ANALYSIS TAB -->
-  <div class="tab-panel" id="tab-analysis">
-    <div class="chart-card">
-      <div class="chart-title">📈 Performance Chart</div>
-      <div class="chart-tabs">
-        <button class="chart-tab active" onclick="switchChart('sgpa',event)">SGPA Trend</button>
-        <button class="chart-tab" onclick="switchChart('cgpa',event)">CGPA Trajectory</button>
-        <button class="chart-tab" onclick="switchChart('credits',event)">Credits Progress</button>
-      </div>
-      <canvas id="mainChart" height="200"></canvas>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">🎯 Semester Breakdown</div>
-      <canvas id="barChart" height="160"></canvas>
-    </div>
-    <div class="result-box">
-      <div class="controls-title">💡 Insights</div>
-      <div id="insightsContent" class="empty-state"><span>📊</span>Calculate first to see insights</div>
-    </div>
-  </div>
-
-  <!-- WHAT-IF TAB -->
-  <div class="tab-panel" id="tab-whatif">
-    <div class="whatif-section">
-      <div class="whatif-title">🔮 What-If Scenario Planner</div>
-      <div class="whatif-desc">Simulate different SGPA outcomes for remaining semesters and see projected CGPA instantly.</div>
-      <div id="scenariosList" class="scenarios-list"></div>
-      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
-        <div class="field-group"><label>Semester</label><select class="inp grade-select" id="wi-sem"></select></div>
-        <div class="field-group"><label>Projected SGPA</label><input class="inp" type="number" id="wi-sgpa" step="0.01" min="0" max="10" placeholder="0.00–10.00"/></div>
-        <button class="btn btn-primary" onclick="addScenario()" style="margin-top:20px">+ Add</button>
-      </div>
-      <button class="btn btn-ghost" style="margin-top:10px;width:100%;" onclick="autoFillScenarios()">✨ Auto-fill all remaining semesters</button>
-    </div>
-  </div>
-
-  <!-- REFERENCE TAB -->
-  <div class="tab-panel" id="tab-reference">
-    <div class="result-box">
-      <div class="controls-title">📖 Grade Point Reference (10-Point Scale)</div>
-      <table class="grade-ref-table">
-        <thead><tr><th>Grade</th><th>Grade Point</th><th>Marks Range</th><th>Remark</th></tr></thead>
-        <tbody>
-          <tr><td><span class="rank-badge rank-O">O</span></td><td>10</td><td>91–100</td><td>Outstanding</td></tr>
-          <tr><td><span class="rank-badge rank-O">A+</span></td><td>9</td><td>81–90</td><td>Excellent</td></tr>
-          <tr><td><span class="rank-badge rank-A">A</span></td><td>8</td><td>71–80</td><td>Very Good</td></tr>
-          <tr><td><span class="rank-badge rank-A">B+</span></td><td>7</td><td>61–70</td><td>Good</td></tr>
-          <tr><td><span class="rank-badge rank-B">B</span></td><td>6</td><td>51–60</td><td>Above Average</td></tr>
-          <tr><td><span class="rank-badge rank-B">C</span></td><td>5</td><td>45–50</td><td>Average</td></tr>
-          <tr><td><span class="rank-badge rank-C">P</span></td><td>4</td><td>40–44</td><td>Pass</td></tr>
-          <tr><td><span class="rank-badge rank-C">F</span></td><td>0</td><td>&lt;40</td><td>Fail</td></tr>
-        </tbody>
-      </table>
-      <hr class="divider"/>
-      <div class="controls-title">🏅 Division / Classification</div>
-      <table class="grade-ref-table">
-        <thead><tr><th>CGPA Range</th><th>Division</th><th>Class</th></tr></thead>
-        <tbody>
-          <tr><td>9.0 – 10.0</td><td><span class="rank-badge rank-O">Outstanding</span></td><td>First Class with Distinction+</td></tr>
-          <tr><td>8.0 – 8.99</td><td><span class="rank-badge rank-O">Excellent</span></td><td>First Class with Distinction</td></tr>
-          <tr><td>7.0 – 7.99</td><td><span class="rank-badge rank-A">Very Good</span></td><td>First Class</td></tr>
-          <tr><td>6.0 – 6.99</td><td><span class="rank-badge rank-A">Good</span></td><td>Second Class</td></tr>
-          <tr><td>5.0 – 5.99</td><td><span class="rank-badge rank-B">Average</span></td><td>Pass Class</td></tr>
-          <tr><td>&lt; 5.0</td><td><span class="rank-badge rank-C">Below Par</span></td><td>–</td></tr>
-        </tbody>
-      </table>
-      <hr class="divider"/>
-      <div class="controls-title">🔢 CGPA ↔ Percentage Conversion</div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:var(--font-mono);font-size:15px;color:var(--cyan);text-align:center;">
-        Percentage = CGPA × 10
-      </div>
-      <div id="cgpa-pct-live" style="text-align:center;margin-top:12px;font-family:var(--font-mono);font-size:14px;color:var(--text-muted);">
-        Enter data to see your equivalent percentage
-      </div>
-      <hr class="divider"/>
-      <div class="controls-title">📚 JUET CSE — Full Credit Structure</div>
-      <table class="grade-ref-table" id="full-credit-table">
-        <thead><tr><th>Sem</th><th>Code</th><th>Subject</th><th>Credits</th><th>Type</th></tr></thead>
-        <tbody id="full-credit-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-
 </div>
-<div class="footer">CGPA Planner Pro · JUET Guna · CSE B.Tech · 160 Credits · 10-Point Scale</div>
+
+<!-- ══════════════ APP SCREEN ══════════════ -->
+<div id="app-screen">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="topnav-brand">CGPA Planner <span>Pro</span></div>
+    <div class="topnav-right">
+      <div class="save-indicator"><div class="save-dot" id="save-dot"></div><span id="save-label">Saved</span></div>
+      <div class="user-pill" onclick="toggleProfileDropdown()">
+        <div class="user-avatar" id="nav-avatar">?</div>
+        <span class="user-name" id="nav-username">Loading...</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- PROFILE DROPDOWN -->
+  <div class="profile-dropdown" id="profileDropdown">
+    <div class="pd-header">
+      <div class="pd-name" id="pd-name">–</div>
+      <div class="pd-email" id="pd-enroll">–</div>
+    </div>
+    <div class="pd-item" onclick="switchTab('profile');closeDropdown()">👤 My Profile</div>
+    <div class="pd-item" onclick="exportPDF();closeDropdown()">📄 Export PDF</div>
+    <div class="pd-item" onclick="openChangePassword()">🔑 Change Password</div>
+    <div class="pd-item danger" onclick="doLogout()">⏻ Sign Out</div>
+  </div>
+
+  <div class="app-shell">
+    <div class="header">
+      <div class="header-badge">JUET GUNA · CSE · B.TECH · 8 SEMESTERS · 160 CREDITS</div>
+      <h2>Welcome back, <span id="welcome-name" style="color:var(--cyan)">Student</span> 👋</h2>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Current CGPA</div><div class="stat-value" id="sc-cgpa">—</div><div class="stat-sub" id="sc-cgpa-sub">No data yet</div></div>
+      <div class="stat-card"><div class="stat-label">Sems Done</div><div class="stat-value" id="sc-done">0</div><div class="stat-sub">of 8 semesters</div></div>
+      <div class="stat-card"><div class="stat-label">Best SGPA</div><div class="stat-value" id="sc-best">—</div><div class="stat-sub" id="sc-best-sub">–</div></div>
+      <div class="stat-card"><div class="stat-label">Division</div><div class="stat-value" id="sc-rank" style="font-size:18px">–</div><div class="stat-sub" id="sc-rank-sub">Enter data first</div></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('entry')">📝 Grades</button>
+      <button class="tab-btn" onclick="switchTab('analysis')">📊 Analysis</button>
+      <button class="tab-btn" onclick="switchTab('whatif')">🔮 What-If</button>
+      <button class="tab-btn" onclick="switchTab('reference')">📖 Reference</button>
+      <button class="tab-btn" onclick="switchTab('profile')">👤 Profile</button>
+    </div>
+
+    <!-- GRADE ENTRY TAB -->
+    <div class="tab-panel active" id="tab-entry">
+      <div class="entry-mode-bar">
+        <span>📋 Mode:</span>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="mode-btn-quick" onclick="setMode('quick')">Quick SGPA</button>
+          <button class="mode-btn" id="mode-btn-detailed" onclick="setMode('detailed')">Subject-wise</button>
+        </div>
+      </div>
+      <div class="sem-grid" id="semGrid"></div>
+      <div class="controls-panel">
+        <div class="controls-title">⚙ Target & Simulation</div>
+        <div class="controls-grid">
+          <div class="field-group"><label>Target CGPA</label><input class="inp" type="number" id="targetCGPA" step="0.01" min="0" max="10" placeholder="e.g. 8.50" oninput="liveUpdate()"/></div>
+          <div class="field-group"><label>Simulate Next Sem SGPA</label><input class="inp" type="number" id="simSGPA" step="0.01" min="0" max="10" placeholder="e.g. 9.00"/></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary pulse" onclick="calculate()">⚡ Calculate</button>
+          <button class="btn btn-secondary" onclick="simulateNext()">🔮 Simulate Next Sem</button>
+          <button class="btn btn-secondary" onclick="exportPDF()">📄 Export PDF</button>
+          <button class="btn btn-secondary" onclick="saveData()">💾 Save Now</button>
+          <button class="btn btn-ghost" onclick="confirmReset()">↺ Reset</button>
+        </div>
+      </div>
+      <div id="resultsSection" style="display:none">
+        <div class="result-box">
+          <div class="controls-title">📈 Results</div>
+          <div class="result-grid">
+            <div><div class="r-label">Current CGPA</div><div class="r-val cyan" id="r-cgpa">—</div></div>
+            <div><div class="r-label">Max Achievable CGPA</div><div class="r-val green" id="r-max">—</div></div>
+            <div><div class="r-label">Avg SGPA Needed</div><div class="r-val" id="r-avg">—</div></div>
+            <div><div class="r-label">SGPA Needed Next Sem</div><div class="r-val" id="r-next">—</div></div>
+            <div><div class="r-label">Credits Done</div><div class="r-val" id="r-credits">—</div></div>
+            <div><div class="r-label">Grade Points Earned</div><div class="r-val" id="r-gp">—</div></div>
+          </div>
+          <div id="r-status"></div>
+          <hr class="divider"/>
+          <div class="progress-section">
+            <div class="progress-meta"><span>Progress to Target</span><span id="r-progress-pct">0%</span></div>
+            <div class="progress-track"><div class="progress-fill" id="r-bar"></div></div>
+          </div>
+          <div id="r-strategy" style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-top:8px;line-height:1.8;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYSIS TAB -->
+    <div class="tab-panel" id="tab-analysis">
+      <div class="chart-card">
+        <div class="chart-title">📈 Performance Chart</div>
+        <div class="chart-tabs">
+          <button class="chart-tab active" onclick="switchChart('sgpa',event)">SGPA Trend</button>
+          <button class="chart-tab" onclick="switchChart('cgpa',event)">CGPA Trajectory</button>
+          <button class="chart-tab" onclick="switchChart('credits',event)">Credits Progress</button>
+        </div>
+        <canvas id="mainChart" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🎯 Semester Breakdown</div>
+        <canvas id="barChart" height="160"></canvas>
+      </div>
+      <div class="result-box">
+        <div class="controls-title">💡 Insights</div>
+        <div id="insightsContent" class="empty-state"><span>📊</span>Calculate first to see insights</div>
+      </div>
+    </div>
+
+    <!-- WHAT-IF TAB -->
+    <div class="tab-panel" id="tab-whatif">
+      <div class="whatif-section">
+        <div class="whatif-title">🔮 What-If Scenario Planner</div>
+        <div class="whatif-desc">Simulate different SGPA outcomes for remaining semesters and see projected CGPA instantly.</div>
+        <div id="scenariosList" class="scenarios-list"></div>
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+          <div class="field-group"><label>Semester</label><select class="inp grade-select" id="wi-sem"></select></div>
+          <div class="field-group"><label>Projected SGPA</label><input class="inp" type="number" id="wi-sgpa" step="0.01" min="0" max="10" placeholder="0.00–10.00"/></div>
+          <button class="btn btn-primary" onclick="addScenario()" style="margin-top:20px">+ Add</button>
+        </div>
+        <button class="btn btn-ghost" style="margin-top:10px;width:100%;" onclick="autoFillScenarios()">✨ Auto-fill all remaining semesters</button>
+      </div>
+    </div>
+
+    <!-- REFERENCE TAB -->
+    <div class="tab-panel" id="tab-reference">
+      <div class="result-box">
+        <div class="controls-title">📖 Grade Point Reference</div>
+        <table class="grade-ref-table">
+          <thead><tr><th>Grade</th><th>Points</th><th>Marks</th><th>Remark</th></tr></thead>
+          <tbody>
+            <tr><td><span class="rank-badge rank-O">O</span></td><td>10</td><td>91–100</td><td>Outstanding</td></tr>
+            <tr><td><span class="rank-badge rank-O">A+</span></td><td>9</td><td>81–90</td><td>Excellent</td></tr>
+            <tr><td><span class="rank-badge rank-A">A</span></td><td>8</td><td>71–80</td><td>Very Good</td></tr>
+            <tr><td><span class="rank-badge rank-A">B+</span></td><td>7</td><td>61–70</td><td>Good</td></tr>
+            <tr><td><span class="rank-badge rank-B">B</span></td><td>6</td><td>51–60</td><td>Above Average</td></tr>
+            <tr><td><span class="rank-badge rank-B">C</span></td><td>5</td><td>45–50</td><td>Average</td></tr>
+            <tr><td><span class="rank-badge rank-C">P</span></td><td>4</td><td>40–44</td><td>Pass</td></tr>
+            <tr><td><span class="rank-badge rank-C">F</span></td><td>0</td><td>&lt;40</td><td>Fail</td></tr>
+          </tbody>
+        </table>
+        <hr class="divider"/>
+        <div class="controls-title">🔢 Percentage Conversion</div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--font-mono);font-size:15px;color:var(--cyan);text-align:center;">Percentage = CGPA × 10</div>
+        <div id="cgpa-pct-live" style="text-align:center;margin-top:10px;font-size:13px;color:var(--text-muted);font-family:var(--font-mono);">Enter data to see your percentage</div>
+        <hr class="divider"/>
+        <div class="controls-title">📚 JUET CSE Full Credit Structure</div>
+        <table class="grade-ref-table"><thead><tr><th>Sem</th><th>Code</th><th>Subject</th><th>Cr</th></tr></thead>
+        <tbody id="full-credit-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div class="tab-panel" id="tab-profile">
+      <div class="profile-section" style="text-align:center;">
+        <div class="profile-avatar-large" id="profile-avatar-large">?</div>
+        <div style="font-size:20px;font-weight:700;" id="profile-fullname">–</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px;" id="profile-username-display">–</div>
+        <div style="font-size:12px;color:var(--text-dim);font-family:var(--font-mono);margin-top:2px;" id="profile-enroll-display">–</div>
+        <div class="profile-info-grid">
+          <div class="info-item"><div class="r-label">Current CGPA</div><div class="r-val cyan" id="prof-cgpa">—</div></div>
+          <div class="info-item"><div class="r-label">Percentage</div><div class="r-val green" id="prof-pct">—</div></div>
+          <div class="info-item"><div class="r-label">Credits Done</div><div class="r-val" id="prof-cr">—</div></div>
+          <div class="info-item"><div class="r-label">Division</div><div class="r-val" id="prof-div">—</div></div>
+          <div class="info-item"><div class="r-label">Best SGPA</div><div class="r-val amber" id="prof-best">—</div></div>
+          <div class="info-item"><div class="r-label">Member Since</div><div class="r-val" id="prof-since" style="font-size:13px">—</div></div>
+        </div>
+      </div>
+      <div class="result-box">
+        <div class="controls-title">🕒 Recent Activity</div>
+        <div id="activity-list" class="activity-list"></div>
+      </div>
+      <div class="result-box">
+        <div class="controls-title">⚙ Account Settings</div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="openChangePassword()">🔑 Change Password</button>
+          <button class="btn btn-danger" onclick="confirmDeleteAccount()">🗑 Delete Account</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- app-shell -->
+  <div class="footer">CGPA Planner Pro · JUET Guna · CSE B.Tech · 160 Credits · 10-Point Scale</div>
+</div><!-- app-screen -->
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="modal-chpass">
+  <div class="modal">
+    <h3>🔑 Change Password</h3>
+    <div class="auth-field"><label>Current Password</label><input class="auth-input" id="cp-old" type="password" placeholder="Current password"/></div>
+    <div class="auth-field"><label>New Password</label><input class="auth-input" id="cp-new" type="password" placeholder="New password (min 6 chars)"/></div>
+    <div class="auth-err" id="cp-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-chpass')">Cancel</button>
+      <button class="btn btn-primary" onclick="doChangePassword()">Update →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET CONFIRM MODAL -->
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal">
+    <h3>↺ Reset All Grades?</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">This will clear all your semester SGPA and subject data. Your account and settings will remain.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reset')">Cancel</button>
+      <button class="btn btn-danger" onclick="doReset()">Reset →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE ACCOUNT MODAL -->
+<div class="modal-overlay" id="modal-delaccount">
+  <div class="modal">
+    <h3>🗑 Delete Account?</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">This will permanently delete your account and all data. This cannot be undone.</p>
+    <div class="auth-field"><label>Type your username to confirm</label><input class="auth-input" id="del-confirm" type="text" placeholder="username"/></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-delaccount')">Cancel</button>
+      <button class="btn btn-danger" onclick="doDeleteAccount()">Delete Forever →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
 <script>
-// =====================================================================
-// EXACT JUET CSE CURRICULUM from official document
-// Audit/Value Added courses excluded (do not count in CGPA)
-// =====================================================================
+// ═══════════════════════════════════════════════
+// JUET CSE OFFICIAL CURRICULUM
+// ═══════════════════════════════════════════════
 const CURRICULUM = [
-  { sem:1, credits:19.5, subjects:[
-    {code:'MA101', name:'Engineering Mathematics',          credits:4},
-    {code:'PH101', name:'Engineering Physics-1',            credits:4},
-    {code:'HS101', name:'English',                          credits:3},
-    {code:'CS101', name:'Computer Programming',             credits:4},
-    {code:'PH201', name:'Engineering Physics Lab-1',        credits:1},
-    {code:'CS201', name:'Computer Programming Lab',         credits:2},
-    {code:'ME201', name:'Workshop Practices',               credits:1.5},
+  {sem:1,credits:19.5,subjects:[
+    {code:'MA101',name:'Engineering Mathematics',credits:4},
+    {code:'PH101',name:'Engineering Physics-1',credits:4},
+    {code:'HS101',name:'English',credits:3},
+    {code:'CS101',name:'Computer Programming',credits:4},
+    {code:'PH201',name:'Engineering Physics Lab-1',credits:1},
+    {code:'CS201',name:'Computer Programming Lab',credits:2},
+    {code:'ME201',name:'Workshop Practices',credits:1.5},
   ]},
-  { sem:2, credits:22.5, subjects:[
-    {code:'HS104', name:'Life Skills and Effective Communication', credits:2},
-    {code:'MA104', name:'Discrete Mathematics',             credits:4},
-    {code:'PH102', name:'Engineering Physics-2',            credits:4},
-    {code:'EC101', name:'Electrical Science',               credits:4},
-    {code:'CS102', name:'Object Oriented Programming',      credits:4},
-    {code:'PH202', name:'Engineering Physics Lab-2',        credits:1},
-    {code:'EC201', name:'Electrical Science Lab',           credits:1},
-    {code:'CS202', name:'OOP Lab',                          credits:1},
-    {code:'ME202', name:'Engineering Drawing and Design Lab',credits:1.5},
+  {sem:2,credits:22.5,subjects:[
+    {code:'HS104',name:'Life Skills and Effective Communication',credits:2},
+    {code:'MA104',name:'Discrete Mathematics',credits:4},
+    {code:'PH102',name:'Engineering Physics-2',credits:4},
+    {code:'EC101',name:'Electrical Science',credits:4},
+    {code:'CS102',name:'Object Oriented Programming',credits:4},
+    {code:'PH202',name:'Engineering Physics Lab-2',credits:1},
+    {code:'EC201',name:'Electrical Science Lab',credits:1},
+    {code:'CS202',name:'OOP Lab',credits:1},
+    {code:'ME202',name:'Engineering Drawing and Design Lab',credits:1.5},
   ]},
-  { sem:3, credits:20, subjects:[
-    {code:'HS103', name:'Techniques for Decision Making',   credits:3},
-    {code:'CS103', name:'Data Structures',                  credits:4},
-    {code:'EC106', name:'Digital Systems and Microprocessors', credits:4},
-    {code:'CS104', name:'Database Systems',                 credits:4},
-    {code:'CS203', name:'Data Structures Lab',              credits:1},
-    {code:'EC206', name:'Digital Systems & Microprocessors Lab', credits:1},
-    {code:'CS204', name:'Database Systems Lab',             credits:1},
-    {code:'CS205', name:'UI/UX Lab',                        credits:1},
-    {code:'CS206', name:'Advanced Programming Lab-I',       credits:1},
+  {sem:3,credits:20,subjects:[
+    {code:'HS103',name:'Techniques for Decision Making',credits:3},
+    {code:'CS103',name:'Data Structures',credits:4},
+    {code:'EC106',name:'Digital Systems and Microprocessors',credits:4},
+    {code:'CS104',name:'Database Systems',credits:4},
+    {code:'CS203',name:'Data Structures Lab',credits:1},
+    {code:'EC206',name:'Digital Systems & Microprocessors Lab',credits:1},
+    {code:'CS204',name:'Database Systems Lab',credits:1},
+    {code:'CS205',name:'UI/UX Lab',credits:1},
+    {code:'CS206',name:'Advanced Programming Lab-I',credits:1},
   ]},
-  { sem:4, credits:21, subjects:[
-    {code:'HSS',   name:'HSS Elective-1',                   credits:3},
-    {code:'CS105', name:'Software Engineering',             credits:3},
-    {code:'CS106', name:'Algorithms and Problem Solving',   credits:4},
-    {code:'CS107', name:'Computer Organisation and Architecture', credits:4},
-    {code:'CS108', name:'Machine Learning',                 credits:3},
-    {code:'CS207', name:'Algorithms Lab',                   credits:1},
-    {code:'CS208', name:'Computer Organisation & Architecture Lab', credits:1},
-    {code:'CS209', name:'Machine Learning Lab',             credits:1},
-    {code:'CS210', name:'Mobile Application Development Lab', credits:1},
+  {sem:4,credits:21,subjects:[
+    {code:'HSS',name:'HSS Elective-1',credits:3},
+    {code:'CS105',name:'Software Engineering',credits:3},
+    {code:'CS106',name:'Algorithms and Problem Solving',credits:4},
+    {code:'CS107',name:'Computer Organisation and Architecture',credits:4},
+    {code:'CS108',name:'Machine Learning',credits:3},
+    {code:'CS207',name:'Algorithms Lab',credits:1},
+    {code:'CS208',name:'Computer Organisation & Architecture Lab',credits:1},
+    {code:'CS209',name:'Machine Learning Lab',credits:1},
+    {code:'CS210',name:'Mobile Application Development Lab',credits:1},
   ]},
-  { sem:5, credits:26, subjects:[
-    {code:'HSS',   name:'HSS Elective-2',                   credits:3},
-    {code:'MA106', name:'Probability Theory and Random Processes', credits:4},
-    {code:'CSE',   name:'Discipline Elective-1',            credits:3},
-    {code:'CS109', name:'Computer Networks',                credits:3},
-    {code:'CS110', name:'Theory of Computation',            credits:4},
-    {code:'SCI',   name:'Science Elective',                 credits:3},
-    {code:'CS211', name:'Minor Project-1',                  credits:3},
-    {code:'CS212', name:'Computer Networks Lab',            credits:1},
-    {code:'CS213', name:'Open Source Software Lab',         credits:1},
-    {code:'CS214', name:'Advanced Programming Lab-II',      credits:1},
+  {sem:5,credits:26,subjects:[
+    {code:'HSS',name:'HSS Elective-2',credits:3},
+    {code:'MA106',name:'Probability Theory and Random Processes',credits:4},
+    {code:'CSE',name:'Discipline Elective-1',credits:3},
+    {code:'CS109',name:'Computer Networks',credits:3},
+    {code:'CS110',name:'Theory of Computation',credits:4},
+    {code:'SCI',name:'Science Elective',credits:3},
+    {code:'CS211',name:'Minor Project-1',credits:3},
+    {code:'CS212',name:'Computer Networks Lab',credits:1},
+    {code:'CS213',name:'Open Source Software Lab',credits:1},
+    {code:'CS214',name:'Advanced Programming Lab-II',credits:1},
   ]},
-  { sem:6, credits:18, subjects:[
-    {code:'HSS',   name:'HSS Elective-3',                   credits:3},
-    {code:'CS111', name:'Operating Systems',                credits:4},
-    {code:'CS112', name:'Compiler Design',                  credits:3},
-    {code:'CSE',   name:'Discipline Elective-2',            credits:3},
-    {code:'CS215', name:'Minor Project-2',                  credits:3},
-    {code:'CS216', name:'Operating Systems Lab',            credits:1},
-    {code:'CS217', name:'Advanced Programming Lab-III',     credits:1},
+  {sem:6,credits:18,subjects:[
+    {code:'HSS',name:'HSS Elective-3',credits:3},
+    {code:'CS111',name:'Operating Systems',credits:4},
+    {code:'CS112',name:'Compiler Design',credits:3},
+    {code:'CSE',name:'Discipline Elective-2',credits:3},
+    {code:'CS215',name:'Minor Project-2',credits:3},
+    {code:'CS216',name:'Operating Systems Lab',credits:1},
+    {code:'CS217',name:'Advanced Programming Lab-III',credits:1},
   ]},
-  { sem:7, credits:16, subjects:[
-    {code:'OE',    name:'Open Elective-1',                  credits:3},
-    {code:'CSE',   name:'CS Elective-3',                    credits:3},
-    {code:'CSE',   name:'CS Elective-4',                    credits:3},
-    {code:'CSE',   name:'CS Elective-5',                    credits:3},
-    {code:'CS218', name:'Major Project Part-I',             credits:4},
+  {sem:7,credits:16,subjects:[
+    {code:'OE',name:'Open Elective-1',credits:3},
+    {code:'CSE',name:'CS Elective-3',credits:3},
+    {code:'CSE',name:'CS Elective-4',credits:3},
+    {code:'CSE',name:'CS Elective-5',credits:3},
+    {code:'CS218',name:'Major Project Part-I',credits:4},
   ]},
-  { sem:8, credits:17, subjects:[
-    {code:'OE',    name:'Open Elective-2',                  credits:3},
-    {code:'CSE',   name:'CS Elective-6',                    credits:3},
-    {code:'CSE',   name:'CS Elective-7',                    credits:3},
-    {code:'CS219', name:'Major Project Part-II',            credits:8},
+  {sem:8,credits:17,subjects:[
+    {code:'OE',name:'Open Elective-2',credits:3},
+    {code:'CSE',name:'CS Elective-6',credits:3},
+    {code:'CSE',name:'CS Elective-7',credits:3},
+    {code:'CS219',name:'Major Project Part-II',credits:8},
   ]},
 ];
+const SEM_CREDITS   = CURRICULUM.map(s=>s.credits);
+const TOTAL_CREDITS = SEM_CREDITS.reduce((a,b)=>a+b,0); // 160
 
-const SEM_CREDITS   = CURRICULUM.map(s => s.credits);
-const TOTAL_CREDITS = SEM_CREDITS.reduce((a,b)=>a+b, 0); // 160
-
-// =====================================================================
+// ═══════════════════════════════════════════════
 // STATE
-// =====================================================================
-let entryMode = 'quick';
-let quickSGPA = Array(8).fill('');
-let semData   = CURRICULUM.map(sem => ({
-  subjects: sem.subjects.map(s => ({code:s.code, name:s.name, credits:String(s.credits), grade:''}))
-}));
-let scenarios = [];
-let mainChart = null, barChart = null;
+// ═══════════════════════════════════════════════
+let currentUser   = null; // {username, name, enrollment, passwordHash, createdAt}
+let entryMode     = 'quick';
+let quickSGPA     = Array(8).fill('');
+let semData       = freshSemData();
+let scenarios     = [];
+let targetCGPA    = '';
+let mainChart     = null, barChart = null;
 let activeChartType = 'sgpa';
+let saveTimer     = null;
 
-// =====================================================================
-// MODE
-// =====================================================================
-function setMode(mode){
-  entryMode = mode;
-  document.getElementById('mode-btn-quick').classList.toggle('active', mode==='quick');
-  document.getElementById('mode-btn-detailed').classList.toggle('active', mode==='detailed');
-  buildSemGrid();
-  liveUpdate();
+function freshSemData(){
+  return CURRICULUM.map(sem=>({
+    subjects: sem.subjects.map(s=>({code:s.code,name:s.name,credits:String(s.credits),grade:''}))
+  }));
 }
 
-// =====================================================================
+// ═══════════════════════════════════════════════
+// STORAGE HELPERS (uses window.storage API)
+// ═══════════════════════════════════════════════
+async function storeGet(key, shared=false){
+  try{ const r=await window.storage.get(key,shared); return r?JSON.parse(r.value):null; }catch(e){ return null; }
+}
+async function storeSet(key, val, shared=false){
+  try{ await window.storage.set(key,JSON.stringify(val),shared); return true; }catch(e){ return false; }
+}
+async function storeDel(key, shared=false){
+  try{ await window.storage.delete(key,shared); return true; }catch(e){ return false; }
+}
+
+// ═══════════════════════════════════════════════
+// SIMPLE HASH (not cryptographic — for demo)
+// ═══════════════════════════════════════════════
+function simpleHash(str){
+  let h=5381;
+  for(let i=0;i<str.length;i++) h=((h<<5)+h)+str.charCodeAt(i);
+  return (h>>>0).toString(16);
+}
+
+// ═══════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════
+function showAuthTab(tab){
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='login'&&i===0)||(tab==='register'&&i===1)));
+  document.getElementById('auth-login').style.display   = tab==='login'?'block':'none';
+  document.getElementById('auth-register').style.display= tab==='register'?'block':'none';
+}
+
+async function doLogin(){
+  const u=document.getElementById('login-user').value.trim().toLowerCase();
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');
+  err.classList.remove('show');
+  if(!u||!p){err.textContent='Please fill all fields.';err.classList.add('show');return;}
+  const userData = await storeGet(`user:${u}`);
+  if(!userData){err.textContent='Account not found. Please register first.';err.classList.add('show');return;}
+  if(userData.passwordHash !== simpleHash(p)){err.textContent='Incorrect password.';err.classList.add('show');return;}
+  currentUser = userData;
+  await loadUserData();
+  enterApp();
+}
+
+async function doRegister(){
+  const name   = document.getElementById('reg-name').value.trim();
+  const u      = document.getElementById('reg-user').value.trim().toLowerCase();
+  const enroll = document.getElementById('reg-enroll').value.trim().toUpperCase();
+  const p      = document.getElementById('reg-pass').value;
+  const err    = document.getElementById('reg-err');
+  err.classList.remove('show');
+  if(!name||!u||!p){err.textContent='Please fill all required fields.';err.classList.add('show');return;}
+  if(p.length<6){err.textContent='Password must be at least 6 characters.';err.classList.add('show');return;}
+  if(!/^[a-z0-9_]+$/.test(u)){err.textContent='Username: only letters, numbers, underscore.';err.classList.add('show');return;}
+  const existing = await storeGet(`user:${u}`);
+  if(existing){err.textContent='Username already taken. Choose another.';err.classList.add('show');return;}
+  const userData = {username:u, name, enrollment:enroll||'Not set', passwordHash:simpleHash(p), createdAt:new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})};
+  await storeSet(`user:${u}`, userData);
+  currentUser = userData;
+  // init empty data
+  quickSGPA=Array(8).fill('');
+  semData=freshSemData();
+  scenarios=[];
+  targetCGPA='';
+  await saveData(true);
+  enterApp();
+  showToast('🎉 Account created! Welcome, '+name.split(' ')[0]+'!','success');
+}
+
+function enterApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  // populate nav
+  const initials = currentUser.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('nav-avatar').textContent    = initials;
+  document.getElementById('nav-username').textContent  = currentUser.name.split(' ')[0];
+  document.getElementById('pd-name').textContent       = currentUser.name;
+  document.getElementById('pd-enroll').textContent     = currentUser.enrollment;
+  document.getElementById('welcome-name').textContent  = currentUser.name.split(' ')[0];
+  document.getElementById('profile-avatar-large').textContent = initials;
+  document.getElementById('profile-fullname').textContent     = currentUser.name;
+  document.getElementById('profile-username-display').textContent = '@'+currentUser.username;
+  document.getElementById('profile-enroll-display').textContent   = currentUser.enrollment;
+  document.getElementById('prof-since').textContent = currentUser.createdAt||'—';
+  buildSemGrid();
+  liveUpdate();
+  buildFullCreditTable();
+}
+
+async function doLogout(){
+  await saveData(true);
+  currentUser=null;
+  quickSGPA=Array(8).fill('');
+  semData=freshSemData();
+  scenarios=[];
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  showAuthTab('login');
+  closeDropdown();
+}
+
+async function doChangePassword(){
+  const oldP = document.getElementById('cp-old').value;
+  const newP = document.getElementById('cp-new').value;
+  const err  = document.getElementById('cp-err');
+  err.classList.remove('show');
+  if(simpleHash(oldP)!==currentUser.passwordHash){err.textContent='Current password incorrect.';err.classList.add('show');return;}
+  if(newP.length<6){err.textContent='New password must be at least 6 characters.';err.classList.add('show');return;}
+  currentUser.passwordHash=simpleHash(newP);
+  await storeSet(`user:${currentUser.username}`,currentUser);
+  closeModal('modal-chpass');
+  showToast('🔑 Password updated successfully!','success');
+}
+
+async function doDeleteAccount(){
+  const confirm=document.getElementById('del-confirm').value.trim().toLowerCase();
+  if(confirm!==currentUser.username){ showToast('Username mismatch.','error'); return; }
+  await storeDel(`user:${currentUser.username}`);
+  await storeDel(`data:${currentUser.username}`);
+  await storeDel(`activity:${currentUser.username}`);
+  closeModal('modal-delaccount');
+  doLogout();
+  showToast('Account deleted.','info');
+}
+
+// ═══════════════════════════════════════════════
+// SAVE / LOAD USER DATA
+// ═══════════════════════════════════════════════
+async function saveData(silent=false){
+  if(!currentUser) return;
+  setSaveDot('saving');
+  const payload={
+    quickSGPA, semData, targetCGPA,
+    entryMode, scenarios,
+    savedAt: new Date().toLocaleString('en-IN')
+  };
+  const ok = await storeSet(`data:${currentUser.username}`, payload);
+  if(ok){
+    setSaveDot('saved');
+    if(!silent) showToast('💾 Saved!','success');
+    await logActivity('Data saved');
+  } else {
+    setSaveDot('error');
+    if(!silent) showToast('❌ Save failed','error');
+  }
+}
+
+async function loadUserData(){
+  if(!currentUser) return;
+  const d = await storeGet(`data:${currentUser.username}`);
+  if(d){
+    quickSGPA  = d.quickSGPA  || Array(8).fill('');
+    semData    = d.semData    || freshSemData();
+    targetCGPA = d.targetCGPA || '';
+    entryMode  = d.entryMode  || 'quick';
+    scenarios  = d.scenarios  || [];
+  } else {
+    quickSGPA=Array(8).fill(''); semData=freshSemData(); targetCGPA=''; entryMode='quick'; scenarios=[];
+  }
+}
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  setSaveDot('saving');
+  saveTimer = setTimeout(()=>saveData(true), 2000);
+}
+
+function setSaveDot(state){
+  const dot=document.getElementById('save-dot');
+  const lbl=document.getElementById('save-label');
+  dot.className='save-dot'+(state==='saving'?' saving':state==='error'?' error':'');
+  lbl.textContent=state==='saving'?'Saving…':state==='error'?'Error':'Saved';
+}
+
+async function logActivity(msg){
+  if(!currentUser) return;
+  let log = await storeGet(`activity:${currentUser.username}`) || [];
+  log.unshift({msg, time: new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})});
+  if(log.length>10) log=log.slice(0,10);
+  await storeSet(`activity:${currentUser.username}`, log);
+}
+
+// ═══════════════════════════════════════════════
+// MODE
+// ═══════════════════════════════════════════════
+function setMode(mode){
+  entryMode=mode;
+  document.getElementById('mode-btn-quick').classList.toggle('active',mode==='quick');
+  document.getElementById('mode-btn-detailed').classList.toggle('active',mode==='detailed');
+  buildSemGrid();
+  liveUpdate();
+  scheduleSave();
+}
+
+// ═══════════════════════════════════════════════
 // BUILD SEM GRID
-// =====================================================================
+// ═══════════════════════════════════════════════
 function buildSemGrid(){
-  const grid = document.getElementById('semGrid');
-  grid.innerHTML = '';
-  for(let i=0; i<8; i++){
-    const sg = computeSGPA(i);
-    const card = document.createElement('div');
-    card.className = 'sem-card' + (sg!==null?' has-data':'');
-    card.id = `sem-card-${i}`;
-    card.innerHTML = `
+  const grid=document.getElementById('semGrid');
+  grid.innerHTML='';
+  for(let i=0;i<8;i++){
+    const sg=computeSGPA(i);
+    const card=document.createElement('div');
+    card.className='sem-card'+(sg!==null?' has-data':'');
+    card.id=`sem-card-${i}`;
+    card.innerHTML=`
       <div class="sem-header" onclick="toggleSem(${i})">
         <div>
           <div class="sem-title">SEMESTER ${i+1}</div>
           <div class="sem-credits-badge">${SEM_CREDITS[i]} credits · ${CURRICULUM[i].subjects.length} subjects</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div id="sem-sgpa-top-${i}">
-            ${sg!==null
-              ? `<span class="sem-sgpa-display">${sg.toFixed(2)}</span>`
-              : `<span class="sem-sgpa-display empty">—</span>`}
-          </div>
+          <div id="sem-sgpa-top-${i}">${sg!==null?`<span class="sem-sgpa-display">${sg.toFixed(2)}</span>`:`<span class="sem-sgpa-display empty">—</span>`}</div>
           <span class="sem-toggle">▼</span>
         </div>
       </div>
@@ -466,305 +846,211 @@ function buildSemGrid(){
     renderSemBody(i);
   }
   buildWhatIfDropdown();
-  buildFullCreditTable();
+  // restore target
+  const t=document.getElementById('targetCGPA');
+  if(t&&targetCGPA) t.value=targetCGPA;
 }
 
 function renderSemBody(i){
-  const inner = document.getElementById(`sem-body-inner-${i}`);
+  const inner=document.getElementById(`sem-body-inner-${i}`);
   if(!inner) return;
-
-  if(entryMode === 'quick'){
-    let subjectRows = CURRICULUM[i].subjects.map(s => `
-      <div class="quick-subject-row">
-        <span class="quick-subject-code">${s.code}</span>
-        <span class="quick-subject-name">${s.name}</span>
-        <span class="quick-subject-cr">${s.credits}cr</span>
-      </div>`).join('');
-    inner.innerHTML = `
+  if(entryMode==='quick'){
+    inner.innerHTML=`
       <div class="quick-sgpa-wrap">
         <label>SGPA:</label>
         <input class="quick-inp" type="number" step="0.01" min="0" max="10"
-               id="quick-${i}" value="${quickSGPA[i]}" placeholder="0.00–10.00"
-               oninput="quickSGPA[${i}]=this.value; updateSemHeader(${i}); liveUpdate()"/>
-        <button class="clear-btn" onclick="clearQuickSem(${i})">✕ Clear</button>
+               id="quick-${i}" value="${quickSGPA[i]||''}" placeholder="0.00–10.00"
+               oninput="quickSGPA[${i}]=this.value; updateSemHeader(${i}); liveUpdate(); scheduleSave()"/>
+        <button class="clear-btn" onclick="clearQuickSem(${i})">✕</button>
       </div>
-      <div class="quick-subjects">${subjectRows}</div>
-      <div class="audit-note">★ Audit courses (Value Added, Internship) excluded from CGPA calculation</div>`;
+      <div class="quick-subjects">
+        ${CURRICULUM[i].subjects.map(s=>`
+          <div class="quick-subject-row">
+            <span class="quick-subject-code">${s.code}</span>
+            <span class="quick-subject-name">${s.name}</span>
+            <span class="quick-subject-cr">${s.credits}cr</span>
+          </div>`).join('')}
+      </div>
+      <div class="audit-note">★ Audit courses excluded from CGPA · Total counted: ${SEM_CREDITS[i]} credits</div>`;
   } else {
-    // Detailed mode
-    let rows = '';
-    semData[i].subjects.forEach((sub, ji) => {
-      const gp = sub.credits && sub.grade !== ''
-        ? (parseFloat(sub.grade) * parseFloat(sub.credits)).toFixed(1) : '—';
-      rows += `
-        <div class="subject-row">
-          <input class="inp name-inp" type="text" value="${escHtml(sub.name)}" placeholder="Subject name"
-                 oninput="semData[${i}].subjects[${ji}].name=this.value"/>
-          <input class="inp" type="number" step="0.5" min="0" max="10" value="${sub.credits}" placeholder="Cr"
-                 oninput="semData[${i}].subjects[${ji}].credits=this.value; calcDetailedSGPA(${i})"/>
-          <select class="grade-select" onchange="semData[${i}].subjects[${ji}].grade=this.value; calcDetailedSGPA(${i})">
-            <option value="">–</option>
-            ${[10,9,8,7,6,5,4,0].map(g =>
-              `<option value="${g}"${sub.grade==String(g)?' selected':''}>
-                ${g===10?'O':g===9?'A+':g===8?'A':g===7?'B+':g===6?'B':g===5?'C':g===4?'P':'F'} (${g})
-              </option>`).join('')}
-          </select>
-          <span style="font-family:var(--font-mono);font-size:12px;color:var(--cyan);text-align:center"
-                id="gp-${i}-${ji}">${gp}</span>
-        </div>`;
+    let rows='';
+    semData[i].subjects.forEach((sub,ji)=>{
+      const gp=sub.credits&&sub.grade!==''?(parseFloat(sub.grade)*parseFloat(sub.credits)).toFixed(1):'—';
+      rows+=`<div class="subject-row">
+        <input class="inp name-inp" type="text" value="${escHtml(sub.name)}" placeholder="Subject"
+               oninput="semData[${i}].subjects[${ji}].name=this.value;scheduleSave()"/>
+        <input class="inp" type="number" step="0.5" min="0" max="10" value="${sub.credits}" placeholder="Cr"
+               oninput="semData[${i}].subjects[${ji}].credits=this.value;calcDetailedSGPA(${i})"/>
+        <select class="grade-select" onchange="semData[${i}].subjects[${ji}].grade=this.value;calcDetailedSGPA(${i})">
+          <option value="">–</option>
+          ${[10,9,8,7,6,5,4,0].map(g=>`<option value="${g}"${sub.grade==String(g)?' selected':''}>${g===10?'O':g===9?'A+':g===8?'A':g===7?'B+':g===6?'B':g===5?'C':g===4?'P':'F'} (${g})</option>`).join('')}
+        </select>
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--cyan);text-align:center" id="gp-${i}-${ji}">${gp}</span>
+      </div>`;
     });
-    inner.innerHTML = `
-      <div class="subject-row header-row">
-        <span>Subject</span><span>Cr</span><span>Grade</span><span>GP</span>
-      </div>
+    inner.innerHTML=`
+      <div class="subject-row header-row"><span>Subject</span><span>Cr</span><span>Grade</span><span>GP</span></div>
       <div id="subjects-${i}">${rows}</div>
       <button class="add-subject-btn" onclick="addSubject(${i})">+ Add Subject</button>
       <div class="sgpa-result-row">
         <span class="sgpa-label">SGPA (Sem ${i+1})</span>
         <span class="sgpa-val" id="sgpa-live-${i}">—</span>
       </div>
-      <div class="audit-note">★ Audit courses excluded. Total counted credits: ${SEM_CREDITS[i]}</div>`;
-    calcDetailedSGPA(i, false);
+      <div class="audit-note">★ Audit courses excluded · Total counted: ${SEM_CREDITS[i]} credits</div>`;
+    calcDetailedSGPA(i,false);
   }
 }
 
-function escHtml(t){
-  return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function escHtml(t){return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toggleSem(i){document.getElementById(`sem-card-${i}`).classList.toggle('open');}
+function clearQuickSem(i){quickSGPA[i]='';const el=document.getElementById(`quick-${i}`);if(el)el.value='';updateSemHeader(i);liveUpdate();scheduleSave();}
+function addSubject(si){semData[si].subjects.push({code:'',name:'',credits:'',grade:''});renderSemBody(si);scheduleSave();}
 
-function toggleSem(i){ document.getElementById(`sem-card-${i}`).classList.toggle('open'); }
-
-function clearQuickSem(i){
-  quickSGPA[i]='';
-  const el = document.getElementById(`quick-${i}`);
-  if(el) el.value='';
-  updateSemHeader(i);
-  liveUpdate();
-}
-
-function addSubject(si){
-  semData[si].subjects.push({code:'',name:'',credits:'',grade:''});
-  renderSemBody(si);
-}
-
-// =====================================================================
-// SGPA COMPUTATION
-// =====================================================================
+// ═══════════════════════════════════════════════
+// SGPA
+// ═══════════════════════════════════════════════
 function computeSGPA(i){
-  if(entryMode==='quick'){
-    const v = parseFloat(quickSGPA[i]);
-    return (!isNaN(v) && v>=0 && v<=10) ? v : null;
-  }
+  if(entryMode==='quick'){const v=parseFloat(quickSGPA[i]);return !isNaN(v)&&v>=0&&v<=10?v:null;}
   return computeDetailedSGPA(i);
 }
-
 function computeDetailedSGPA(i){
-  let gp=0, cr=0;
-  semData[i].subjects.forEach(s => {
-    if(s.credits && s.grade!==''){
-      gp += parseFloat(s.credits) * parseFloat(s.grade);
-      cr += parseFloat(s.credits);
-    }
-  });
-  return cr > 0 ? gp/cr : null;
+  let gp=0,cr=0;
+  semData[i].subjects.forEach(s=>{if(s.credits&&s.grade!==''){gp+=parseFloat(s.credits)*parseFloat(s.grade);cr+=parseFloat(s.credits);}});
+  return cr>0?gp/cr:null;
 }
-
-function calcDetailedSGPA(i, doHeader=true){
-  semData[i].subjects.forEach((s,ji) => {
-    const el = document.getElementById(`gp-${i}-${ji}`);
-    if(el) el.textContent = (s.credits && s.grade!=='')
-      ? (parseFloat(s.credits)*parseFloat(s.grade)).toFixed(1) : '—';
+function calcDetailedSGPA(i,doHeader=true){
+  semData[i].subjects.forEach((s,ji)=>{
+    const el=document.getElementById(`gp-${i}-${ji}`);
+    if(el) el.textContent=s.credits&&s.grade!==''?(parseFloat(s.credits)*parseFloat(s.grade)).toFixed(1):'—';
   });
-  const sg = computeDetailedSGPA(i);
-  const el = document.getElementById(`sgpa-live-${i}`);
-  if(el) el.textContent = sg!==null ? sg.toFixed(2) : '—';
+  const sg=computeDetailedSGPA(i);
+  const el=document.getElementById(`sgpa-live-${i}`);
+  if(el) el.textContent=sg!==null?sg.toFixed(2):'—';
   if(doHeader) updateSemHeader(i);
-  liveUpdate();
+  liveUpdate();scheduleSave();
 }
-
 function updateSemHeader(i){
-  const sg  = computeSGPA(i);
-  const top = document.getElementById(`sem-sgpa-top-${i}`);
-  const card= document.getElementById(`sem-card-${i}`);
+  const sg=computeSGPA(i);
+  const top=document.getElementById(`sem-sgpa-top-${i}`);
+  const card=document.getElementById(`sem-card-${i}`);
   if(!top) return;
-  if(sg !== null){
-    top.innerHTML = `<span class="sem-sgpa-display">${sg.toFixed(2)}</span>`;
-    card.classList.add('has-data');
-  } else {
-    top.innerHTML = `<span class="sem-sgpa-display empty">—</span>`;
-    card.classList.remove('has-data');
-  }
+  top.innerHTML=sg!==null?`<span class="sem-sgpa-display">${sg.toFixed(2)}</span>`:`<span class="sem-sgpa-display empty">—</span>`;
+  card.classList.toggle('has-data',sg!==null);
 }
+function getSGPAs(){return Array.from({length:8},(_,i)=>computeSGPA(i));}
 
-function getSGPAs(){ return Array.from({length:8}, (_,i) => computeSGPA(i)); }
-
-// =====================================================================
-// MAIN CALCULATE
-// =====================================================================
+// ═══════════════════════════════════════════════
+// CALCULATE
+// ═══════════════════════════════════════════════
 function calculate(){
-  const sgpas = getSGPAs();
-  let total=0, cSum=0, completed=0, remCr=0;
-  sgpas.forEach((s,i) => {
-    if(s!==null){ total+=s*SEM_CREDITS[i]; cSum+=SEM_CREDITS[i]; completed++; }
-    else remCr += SEM_CREDITS[i];
-  });
-  if(cSum===0){ alert('Enter at least one semester SGPA.'); return; }
-  const cgpa = total/cSum;
-  const pct  = (cgpa*10).toFixed(1);
-
-  // Stat cards
-  document.getElementById('sc-cgpa').textContent = cgpa.toFixed(2);
-  document.getElementById('sc-cgpa').className   = 'stat-value '+cgpaColor(cgpa);
-  document.getElementById('sc-cgpa-sub').textContent = `${pct}% equivalent`;
-  document.getElementById('sc-done').textContent = completed;
-
-  const valids   = sgpas.filter(s=>s!==null);
-  const best     = Math.max(...valids);
-  const bestIdx  = sgpas.indexOf(best);
-  document.getElementById('sc-best').textContent     = best.toFixed(2);
-  document.getElementById('sc-best').className       = 'stat-value '+cgpaColor(best);
-  document.getElementById('sc-best-sub').textContent = `Sem ${bestIdx+1}`;
-
-  const {rank,cls} = getCGPARank(cgpa);
-  document.getElementById('sc-rank').innerHTML       = `<span class="rank-badge ${rank}">${cls}</span>`;
-  document.getElementById('sc-rank-sub').textContent = `CGPA ${cgpa.toFixed(2)}`;
-
-  // Result panel
-  document.getElementById('resultsSection').style.display = 'block';
-  document.getElementById('r-cgpa').textContent    = cgpa.toFixed(2);
-  document.getElementById('r-cgpa').className      = 'r-val cyan';
-  document.getElementById('r-credits').textContent = `${cSum.toFixed(1)} / ${TOTAL_CREDITS}`;
-  document.getElementById('r-gp').textContent      = total.toFixed(2);
-
-  const maxCGPA = (total + remCr*10) / (cSum + remCr);
-  document.getElementById('r-max').textContent = maxCGPA.toFixed(2);
-  document.getElementById('r-max').className   = 'r-val green';
-
-  const target = parseFloat(document.getElementById('targetCGPA').value);
-  if(!isNaN(target) && target>0){
-    const remPts     = target*TOTAL_CREDITS - total;
-    const avgReq     = remCr>0 ? remPts/remCr : null;
-    const nextIdx    = completed<8 ? completed : null;
-    const nextNeeded = nextIdx!==null
-      ? (target*(cSum+SEM_CREDITS[nextIdx]) - total) / SEM_CREDITS[nextIdx] : null;
-
-    document.getElementById('r-avg').textContent  = avgReq!==null ? avgReq.toFixed(2) : '—';
-    document.getElementById('r-avg').className    = 'r-val '+(avgReq>10?'red':avgReq>9?'amber':'green');
-    document.getElementById('r-next').textContent = nextNeeded!==null ? nextNeeded.toFixed(2) : '—';
-    document.getElementById('r-next').className   = 'r-val '+(nextNeeded>10?'red':nextNeeded>9?'amber':'green');
-
-    const statusDiv = document.getElementById('r-status');
-    if(avgReq===null || avgReq<=cgpa){
-      statusDiv.innerHTML=`<div class="status-banner achievable">✅ Target already achieved or on track!</div>`;
-    } else if(avgReq<=10){
-      statusDiv.innerHTML=`<div class="status-banner ${avgReq<=8.5?'achievable':'warning'}">
-        ${avgReq<=8.5?'✅ Achievable':'⚠️ Achievable but needs consistent effort'} — need avg SGPA of <strong>${avgReq.toFixed(2)}</strong>
-      </div>`;
-    } else {
-      statusDiv.innerHTML=`<div class="status-banner impossible">❌ Target ${target} no longer achievable (max possible: ${maxCGPA.toFixed(2)})</div>`;
-    }
-
-    const prog = Math.min((cgpa/target)*100, 100);
-    document.getElementById('r-bar').style.width        = prog+'%';
-    document.getElementById('r-progress-pct').textContent = prog.toFixed(1)+'%';
-
-    if(avgReq!==null && avgReq<=10 && remCr>0){
-      const parts = sgpas.map((s,i) => s===null ? `Sem${i+1}:${avgReq.toFixed(2)}` : null).filter(Boolean);
-      document.getElementById('r-strategy').textContent = '💡 Suggested per remaining sem: '+parts.join('   ');
-    } else {
-      document.getElementById('r-strategy').textContent = '';
-    }
-  } else {
-    ['r-avg','r-next'].forEach(id => {
-      document.getElementById(id).textContent='—';
-      document.getElementById(id).className='r-val';
-    });
+  const sgpas=getSGPAs();
+  let total=0,cSum=0,completed=0,remCr=0;
+  sgpas.forEach((s,i)=>{if(s!==null){total+=s*SEM_CREDITS[i];cSum+=SEM_CREDITS[i];completed++;}else remCr+=SEM_CREDITS[i];});
+  if(cSum===0){alert('Enter at least one semester SGPA.');return;}
+  const cgpa=total/cSum, pct=(cgpa*10).toFixed(1);
+  const valids=sgpas.filter(s=>s!==null), best=Math.max(...valids), bestIdx=sgpas.indexOf(best);
+  const {rank,cls}=getCGPARank(cgpa);
+  // stat cards
+  document.getElementById('sc-cgpa').textContent=cgpa.toFixed(2);
+  document.getElementById('sc-cgpa').className='stat-value '+cgpaColor(cgpa);
+  document.getElementById('sc-cgpa-sub').textContent=`${pct}% equivalent`;
+  document.getElementById('sc-done').textContent=completed;
+  document.getElementById('sc-best').textContent=best.toFixed(2);
+  document.getElementById('sc-best').className='stat-value '+cgpaColor(best);
+  document.getElementById('sc-best-sub').textContent=`Sem ${bestIdx+1}`;
+  document.getElementById('sc-rank').innerHTML=`<span class="rank-badge ${rank}">${cls}</span>`;
+  document.getElementById('sc-rank-sub').textContent=`CGPA ${cgpa.toFixed(2)}`;
+  // results
+  document.getElementById('resultsSection').style.display='block';
+  document.getElementById('r-cgpa').textContent=cgpa.toFixed(2);
+  document.getElementById('r-cgpa').className='r-val cyan';
+  document.getElementById('r-credits').textContent=`${cSum.toFixed(1)} / ${TOTAL_CREDITS}`;
+  document.getElementById('r-gp').textContent=total.toFixed(2);
+  const maxCGPA=(total+remCr*10)/(cSum+remCr);
+  document.getElementById('r-max').textContent=maxCGPA.toFixed(2);
+  document.getElementById('r-max').className='r-val green';
+  const tgt=parseFloat(document.getElementById('targetCGPA').value);
+  targetCGPA=document.getElementById('targetCGPA').value;
+  if(!isNaN(tgt)&&tgt>0){
+    const remPts=tgt*TOTAL_CREDITS-total;
+    const avgReq=remCr>0?remPts/remCr:null;
+    const nextIdx=completed<8?completed:null;
+    const nextNeeded=nextIdx!==null?(tgt*(cSum+SEM_CREDITS[nextIdx])-total)/SEM_CREDITS[nextIdx]:null;
+    document.getElementById('r-avg').textContent=avgReq!==null?avgReq.toFixed(2):'—';
+    document.getElementById('r-avg').className='r-val '+(avgReq>10?'red':avgReq>9?'amber':'green');
+    document.getElementById('r-next').textContent=nextNeeded!==null?nextNeeded.toFixed(2):'—';
+    document.getElementById('r-next').className='r-val '+(nextNeeded>10?'red':nextNeeded>9?'amber':'green');
+    const sd=document.getElementById('r-status');
+    if(avgReq===null||avgReq<=cgpa){sd.innerHTML=`<div class="status-banner achievable">✅ Target already achieved or on track!</div>`;}
+    else if(avgReq<=10){sd.innerHTML=`<div class="status-banner ${avgReq<=8.5?'achievable':'warning'}">${avgReq<=8.5?'✅ Achievable':'⚠️ Achievable but needs consistent effort'} — need avg SGPA <strong>${avgReq.toFixed(2)}</strong></div>`;}
+    else{sd.innerHTML=`<div class="status-banner impossible">❌ Target ${tgt} not achievable (max: ${maxCGPA.toFixed(2)})</div>`;}
+    const prog=Math.min((cgpa/tgt)*100,100);
+    document.getElementById('r-bar').style.width=prog+'%';
+    document.getElementById('r-progress-pct').textContent=prog.toFixed(1)+'%';
+    if(avgReq!==null&&avgReq<=10&&remCr>0){
+      document.getElementById('r-strategy').textContent='💡 Suggested: '+sgpas.map((s,i)=>s===null?`Sem${i+1}:${avgReq.toFixed(2)}`:null).filter(Boolean).join('   ');
+    }else document.getElementById('r-strategy').textContent='';
+  }else{
+    ['r-avg','r-next'].forEach(id=>{document.getElementById(id).textContent='—';document.getElementById(id).className='r-val';});
     document.getElementById('r-status').innerHTML='';
     document.getElementById('r-bar').style.width='0%';
     document.getElementById('r-progress-pct').textContent='0%';
     document.getElementById('r-strategy').textContent='';
   }
-
-  drawCharts(sgpas, cgpa, completed);
-  buildInsights(sgpas, cgpa, completed, valids);
+  drawCharts(sgpas,cgpa,completed);
+  buildInsights(sgpas,cgpa,completed,valids);
+  updateProfileTab(cgpa,cSum,valids,best,bestIdx,cls,rank);
   updateRefTab(cgpa);
 }
 
-function liveUpdate(){
-  if(getSGPAs().some(s=>s!==null)) calculate();
-}
+function liveUpdate(){if(getSGPAs().some(s=>s!==null)) calculate();}
 
-// =====================================================================
+// ═══════════════════════════════════════════════
 // CHARTS
-// =====================================================================
-function drawCharts(sgpas, cgpa, completed){
-  const labels = CURRICULUM.map((_,i) => `Sem ${i+1}`);
-  let rt=0, rc=0;
-  const cgpaTraj = sgpas.map((s,i) => {
-    if(s!==null){ rt+=s*SEM_CREDITS[i]; rc+=SEM_CREDITS[i]; return rt/rc; } return null;
-  });
+// ═══════════════════════════════════════════════
+function drawCharts(sgpas,cgpa,completed){
+  const labels=CURRICULUM.map((_,i)=>`Sem ${i+1}`);
+  let rt=0,rc=0;
+  const cgpaTraj=sgpas.map((s,i)=>{if(s!==null){rt+=s*SEM_CREDITS[i];rc+=SEM_CREDITS[i];return rt/rc;}return null;});
   let cc=0;
-  const credLine = sgpas.map((s,i) => { if(s!==null){ cc+=SEM_CREDITS[i]; return cc; } return null; });
-
+  const credLine=sgpas.map((s,i)=>{if(s!==null){cc+=SEM_CREDITS[i];return cc;}return null;});
   if(mainChart) mainChart.destroy();
-  const ctx = document.getElementById('mainChart').getContext('2d');
+  const ctx=document.getElementById('mainChart').getContext('2d');
   let datasets;
-  if(activeChartType==='sgpa'){
-    datasets=[{label:'SGPA',data:sgpas,borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,.08)',fill:true,tension:.4,pointBackgroundColor:'#00e5ff',pointRadius:5,pointHoverRadius:8,borderWidth:2}];
-  } else if(activeChartType==='cgpa'){
+  if(activeChartType==='sgpa') datasets=[{label:'SGPA',data:sgpas,borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,.08)',fill:true,tension:.4,pointBackgroundColor:'#00e5ff',pointRadius:5,pointHoverRadius:8,borderWidth:2}];
+  else if(activeChartType==='cgpa'){
     datasets=[{label:'CGPA',data:cgpaTraj,borderColor:'#39d353',backgroundColor:'rgba(57,211,83,.08)',fill:true,tension:.4,pointBackgroundColor:'#39d353',pointRadius:5,pointHoverRadius:8,borderWidth:2}];
     const tgt=parseFloat(document.getElementById('targetCGPA').value);
     if(!isNaN(tgt)&&tgt>0) datasets.push({label:'Target',data:Array(8).fill(tgt),borderColor:'#e3b341',borderDash:[5,5],pointRadius:0,borderWidth:1.5,fill:false});
-  } else {
-    datasets=[
-      {label:'Credits Earned',data:credLine,borderColor:'#e3b341',backgroundColor:'rgba(227,179,65,.08)',fill:true,tension:.3,pointBackgroundColor:'#e3b341',pointRadius:5,borderWidth:2},
-      {label:'Total Credits',data:Array(8).fill(TOTAL_CREDITS),borderColor:'#484f58',borderDash:[4,4],pointRadius:0,borderWidth:1,fill:false}
-    ];
-  }
-  mainChart = new Chart(ctx,{type:'line',data:{labels,datasets},options:{
-    responsive:true,
-    plugins:{
-      legend:{labels:{color:'#8b949e',font:{family:'Space Mono',size:11}}},
-      tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
-        callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y!==null?c.parsed.y.toFixed(2):'—'}`}}
-    },
-    scales:{
-      x:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},
-      y:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}},
-         min:0,max:activeChartType==='credits'?TOTAL_CREDITS:10}
-    }
-  }});
-
+  } else datasets=[
+    {label:'Credits Earned',data:credLine,borderColor:'#e3b341',backgroundColor:'rgba(227,179,65,.08)',fill:true,tension:.3,pointBackgroundColor:'#e3b341',pointRadius:5,borderWidth:2},
+    {label:'Total Credits',data:Array(8).fill(TOTAL_CREDITS),borderColor:'#484f58',borderDash:[4,4],pointRadius:0,borderWidth:1,fill:false}
+  ];
+  const chartOpts={responsive:true,plugins:{legend:{labels:{color:'#8b949e',font:{family:'Space Mono',size:11}}},tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y!==null?c.parsed.y.toFixed(2):'—'}`}}},scales:{x:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}},min:0,max:activeChartType==='credits'?TOTAL_CREDITS:10}}};
+  mainChart=new Chart(ctx,{type:'line',data:{labels,datasets},options:chartOpts});
   if(barChart) barChart.destroy();
-  const bctx = document.getElementById('barChart').getContext('2d');
-  const colors = sgpas.map(s => s===null?'rgba(48,54,61,.5)':s>=9?'rgba(0,229,255,.7)':s>=8?'rgba(57,211,83,.7)':s>=7?'rgba(227,179,65,.7)':'rgba(248,81,73,.7)');
-  barChart = new Chart(bctx,{type:'bar',
-    data:{labels,datasets:[{label:'SGPA',data:sgpas,backgroundColor:colors,borderColor:colors.map(c=>c.replace('.7','1')),borderWidth:1,borderRadius:4}]},
-    options:{responsive:true,
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:c=>` SGPA: ${c.parsed.y!==null?c.parsed.y.toFixed(2):'N/A'}`}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},
-              y:{min:0,max:10,grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}}}}});
+  const bctx=document.getElementById('barChart').getContext('2d');
+  const colors=sgpas.map(s=>s===null?'rgba(48,54,61,.5)':s>=9?'rgba(0,229,255,.7)':s>=8?'rgba(57,211,83,.7)':s>=7?'rgba(227,179,65,.7)':'rgba(248,81,73,.7)');
+  barChart=new Chart(bctx,{type:'bar',data:{labels,datasets:[{label:'SGPA',data:sgpas,backgroundColor:colors,borderColor:colors.map(c=>c.replace('.7','1')),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:c=>` SGPA: ${c.parsed.y!==null?c.parsed.y.toFixed(2):'N/A'}`}}},scales:{x:{grid:{display:false},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}},y:{min:0,max:10,grid:{color:'rgba(48,54,61,.5)'},ticks:{color:'#8b949e',font:{family:'Space Mono',size:10}}}}}});
 }
-
-function switchChart(type, evt){
-  activeChartType = type;
+function switchChart(type,evt){
+  activeChartType=type;
   document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
   if(evt&&evt.target) evt.target.classList.add('active');
   liveUpdate();
 }
 
-// =====================================================================
+// ═══════════════════════════════════════════════
 // INSIGHTS
-// =====================================================================
-function buildInsights(sgpas, cgpa, completed, valids){
-  const cont = document.getElementById('insightsContent');
-  if(!completed){ cont.innerHTML='<div class="empty-state"><span>📊</span>No data yet</div>'; return; }
-  const avg   = valids.reduce((a,b)=>a+b,0)/valids.length;
-  const best  = Math.max(...valids), worst = Math.min(...valids);
-  const last2 = valids.slice(-2);
-  const trend = last2.length>1
-    ? (last2[1]-last2[0]>0.05?'📈 Improving':last2[1]-last2[0]<-0.05?'📉 Declining':'➡️ Stable') : '–';
-  const {rank,cls} = getCGPARank(cgpa);
+// ═══════════════════════════════════════════════
+function buildInsights(sgpas,cgpa,completed,valids){
+  const cont=document.getElementById('insightsContent');
+  if(!completed){cont.innerHTML='<div class="empty-state"><span>📊</span>No data yet</div>';return;}
+  const avg=valids.reduce((a,b)=>a+b,0)/valids.length;
+  const best=Math.max(...valids),worst=Math.min(...valids);
+  const last2=valids.slice(-2);
+  const trend=last2.length>1?(last2[1]-last2[0]>0.05?'📈 Improving':last2[1]-last2[0]<-0.05?'📉 Declining':'➡️ Stable'):'–';
+  const {rank,cls}=getCGPARank(cgpa);
   cont.innerHTML=`<div class="result-grid">
     <div><div class="r-label">Avg SGPA</div><div class="r-val cyan">${avg.toFixed(2)}</div></div>
     <div><div class="r-label">SGPA Range</div><div class="r-val">${worst.toFixed(2)} – ${best.toFixed(2)}</div></div>
@@ -775,242 +1061,210 @@ function buildInsights(sgpas, cgpa, completed, valids){
   </div>`;
 }
 
-// =====================================================================
+// ═══════════════════════════════════════════════
+// PROFILE TAB
+// ═══════════════════════════════════════════════
+function updateProfileTab(cgpa,cSum,valids,best,bestIdx,cls,rank){
+  document.getElementById('prof-cgpa').textContent=cgpa.toFixed(2);
+  document.getElementById('prof-pct').textContent=(cgpa*10).toFixed(1)+'%';
+  document.getElementById('prof-cr').textContent=cSum.toFixed(1)+' / '+TOTAL_CREDITS;
+  document.getElementById('prof-div').innerHTML=`<span class="rank-badge ${rank}">${cls}</span>`;
+  document.getElementById('prof-best').textContent=best.toFixed(2)+' (Sem '+(getSGPAs().indexOf(best)+1)+')';
+}
+
+async function loadActivityLog(){
+  const log=await storeGet(`activity:${currentUser.username}`)||[];
+  const cont=document.getElementById('activity-list');
+  if(!log.length){cont.innerHTML='<div class="empty-state" style="padding:16px"><span>📋</span>No activity yet</div>';return;}
+  cont.innerHTML=log.map(a=>`
+    <div class="activity-item">
+      <span>${a.msg}</span>
+      <span class="activity-time">${a.time}</span>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
 // WHAT-IF
-// =====================================================================
+// ═══════════════════════════════════════════════
 function buildWhatIfDropdown(){
-  const sel = document.getElementById('wi-sem');
-  sel.innerHTML = '';
-  for(let i=0;i<8;i++){
-    const o=document.createElement('option');
-    o.value=i; o.textContent=`Semester ${i+1} (${SEM_CREDITS[i]} cr)`;
-    sel.appendChild(o);
-  }
+  const sel=document.getElementById('wi-sem');sel.innerHTML='';
+  for(let i=0;i<8;i++){const o=document.createElement('option');o.value=i;o.textContent=`Semester ${i+1} (${SEM_CREDITS[i]} cr)`;sel.appendChild(o);}
 }
-
 function addScenario(){
-  const si=parseInt(document.getElementById('wi-sem').value);
-  const sg=parseFloat(document.getElementById('wi-sgpa').value);
-  if(isNaN(sg)||sg<0||sg>10){alert('Enter valid SGPA (0–10)');return;}
-  scenarios=scenarios.filter(s=>s.sem!==si);
-  scenarios.push({sem:si,sgpa:sg});
-  renderScenarios();
+  const si=parseInt(document.getElementById('wi-sem').value),sg=parseFloat(document.getElementById('wi-sgpa').value);
+  if(isNaN(sg)||sg<0||sg>10){alert('Enter valid SGPA');return;}
+  scenarios=scenarios.filter(s=>s.sem!==si);scenarios.push({sem:si,sgpa:sg});renderScenarios();scheduleSave();
 }
-
 function autoFillScenarios(){
-  const val=parseFloat(document.getElementById('wi-sgpa').value)||8.0;
-  scenarios=[];
-  getSGPAs().forEach((s,i)=>{if(s===null) scenarios.push({sem:i,sgpa:val});});
-  renderScenarios();
+  const val=parseFloat(document.getElementById('wi-sgpa').value)||8.0;scenarios=[];
+  getSGPAs().forEach((s,i)=>{if(s===null) scenarios.push({sem:i,sgpa:val});});renderScenarios();scheduleSave();
 }
-
-function removeScenario(sem){ scenarios=scenarios.filter(s=>s.sem!==sem); renderScenarios(); }
-
+function removeScenario(sem){scenarios=scenarios.filter(s=>s.sem!==sem);renderScenarios();scheduleSave();}
 function renderScenarios(){
-  const cont = document.getElementById('scenariosList');
-  if(!scenarios.length){ cont.innerHTML='<div class="empty-state"><span>🔮</span>No scenarios yet.</div>'; return; }
-
-  const base = getSGPAs();
-  let bt=0,bc=0; base.forEach((s,i)=>{if(s!==null){bt+=s*SEM_CREDITS[i];bc+=SEM_CREDITS[i];}});
-  const curCGPA = bc>0 ? bt/bc : null;
-  const merged  = base.map((s,i)=>{ const sc=scenarios.find(x=>x.sem===i); return sc?sc.sgpa:s; });
-  let pt=0,pc=0; merged.forEach((s,i)=>{if(s!==null){pt+=s*SEM_CREDITS[i];pc+=SEM_CREDITS[i];}});
-  const projCGPA = pc>0 ? pt/pc : null;
-
+  const cont=document.getElementById('scenariosList');
+  if(!scenarios.length){cont.innerHTML='<div class="empty-state"><span>🔮</span>No scenarios yet.</div>';return;}
+  const base=getSGPAs();let bt=0,bc=0;base.forEach((s,i)=>{if(s!==null){bt+=s*SEM_CREDITS[i];bc+=SEM_CREDITS[i];}});
+  const curCGPA=bc>0?bt/bc:null;
+  const merged=base.map((s,i)=>{const sc=scenarios.find(x=>x.sem===i);return sc?sc.sgpa:s;});
+  let pt=0,pc=0;merged.forEach((s,i)=>{if(s!==null){pt+=s*SEM_CREDITS[i];pc+=SEM_CREDITS[i];}});
+  const projCGPA=pc>0?pt/pc:null;
   cont.innerHTML='';
   scenarios.sort((a,b)=>a.sem-b.sem).forEach(sc=>{
-    const row=document.createElement('div'); row.className='scenario-row';
-    row.innerHTML=`
-      <div><div class="s-label">Semester</div><div style="font-family:var(--font-mono);font-weight:700">Sem ${sc.sem+1}</div></div>
-      <div><div class="s-label">SGPA</div><div class="s-val">${sc.sgpa.toFixed(2)}</div></div>
-      <div><div class="s-label">Credits</div><div style="font-family:var(--font-mono)">${SEM_CREDITS[sc.sem]}</div></div>
-      <button class="del-btn" onclick="removeScenario(${sc.sem})">✕</button>`;
+    const row=document.createElement('div');row.className='scenario-row';
+    row.innerHTML=`<div><div class="s-label">Semester</div><div style="font-family:var(--font-mono);font-weight:700">Sem ${sc.sem+1}</div></div><div><div class="s-label">SGPA</div><div class="s-val">${sc.sgpa.toFixed(2)}</div></div><div><div class="s-label">Credits</div><div style="font-family:var(--font-mono)">${SEM_CREDITS[sc.sem]}</div></div><button class="del-btn" onclick="removeScenario(${sc.sem})">✕</button>`;
     cont.appendChild(row);
   });
-
   if(projCGPA!==null){
-    const diff = curCGPA!==null ? projCGPA-curCGPA : 0;
-    const cls  = diff>0.05?'up':diff<-0.05?'down':'same';
-    const row  = document.createElement('div'); row.className='scenario-row result-row-scenario';
-    row.innerHTML=`
-      <div><div class="s-label">Projected CGPA</div><div class="s-cgpa ${cls}">${projCGPA.toFixed(2)}</div></div>
-      <div><div class="s-label">Change</div><div class="s-cgpa ${cls}">${diff>=0?'+':''}${diff.toFixed(2)}</div></div>
-      <div><div class="s-label">Equivalent %</div><div style="font-family:var(--font-mono);color:var(--amber)">${(projCGPA*10).toFixed(1)}%</div></div>
-      <div></div>`;
+    const diff=curCGPA!==null?projCGPA-curCGPA:0,cls=diff>0.05?'up':diff<-0.05?'down':'same';
+    const row=document.createElement('div');row.className='scenario-row result-row-scenario';
+    row.innerHTML=`<div><div class="s-label">Projected CGPA</div><div class="s-cgpa ${cls}">${projCGPA.toFixed(2)}</div></div><div><div class="s-label">Change</div><div class="s-cgpa ${cls}">${diff>=0?'+':''}${diff.toFixed(2)}</div></div><div><div class="s-label">Equiv %</div><div style="font-family:var(--font-mono);color:var(--amber)">${(projCGPA*10).toFixed(1)}%</div></div><div></div>`;
     cont.appendChild(row);
   }
 }
 
-// =====================================================================
+// ═══════════════════════════════════════════════
 // SIMULATE
-// =====================================================================
+// ═══════════════════════════════════════════════
 function simulateNext(){
   const sg=parseFloat(document.getElementById('simSGPA').value);
-  if(isNaN(sg)||sg<0||sg>10){alert('Enter valid SGPA (0–10)');return;}
+  if(isNaN(sg)||sg<0||sg>10){alert('Enter valid SGPA');return;}
   const next=getSGPAs().findIndex(s=>s===null);
-  if(next===-1){alert('All semesters already have data!');return;}
-  scenarios=scenarios.filter(s=>s.sem!==next);
-  scenarios.push({sem:next,sgpa:sg});
-  switchTab('whatif'); renderScenarios();
+  if(next===-1){alert('All semesters have data!');return;}
+  scenarios=scenarios.filter(s=>s.sem!==next);scenarios.push({sem:next,sgpa:sg});
+  switchTab('whatif');renderScenarios();
 }
 
-// =====================================================================
+// ═══════════════════════════════════════════════
 // PDF EXPORT
-// =====================================================================
+// ═══════════════════════════════════════════════
 function exportPDF(){
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF();
-  const sgpas=getSGPAs();
-  let total=0,cSum=0;
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const sgpas=getSGPAs();let total=0,cSum=0;
   sgpas.forEach((s,i)=>{if(s!==null){total+=s*SEM_CREDITS[i];cSum+=SEM_CREDITS[i];}});
   if(cSum===0){alert('Enter data first');return;}
-  const cgpa=total/cSum, pct=(cgpa*10).toFixed(1);
-  const remCr=TOTAL_CREDITS-cSum;
-  const maxCGPA=((total+remCr*10)/(cSum+remCr)).toFixed(2);
-  const {cls}=getCGPARank(cgpa);
-
-  doc.setFillColor(13,17,23); doc.rect(0,0,210,297,'F');
-  doc.setFillColor(22,27,34); doc.rect(0,0,210,42,'F');
-  doc.setTextColor(0,229,255); doc.setFontSize(17); doc.setFont('helvetica','bold');
+  const cgpa=total/cSum,pct=(cgpa*10).toFixed(1),remCr=TOTAL_CREDITS-cSum;
+  const maxCGPA=((total+remCr*10)/(cSum+remCr)).toFixed(2);const{cls}=getCGPARank(cgpa);
+  doc.setFillColor(13,17,23);doc.rect(0,0,210,297,'F');
+  doc.setFillColor(22,27,34);doc.rect(0,0,210,44,'F');
+  doc.setTextColor(0,229,255);doc.setFontSize(17);doc.setFont('helvetica','bold');
   doc.text('CGPA Planner Pro — Academic Report',15,16);
-  doc.setFontSize(9); doc.setTextColor(139,148,158);
-  doc.text('Jaypee University of Engineering and Technology, Guna | CSE | B.Tech | 160 Credits',15,25);
-  doc.text('Generated: '+new Date().toLocaleString(),15,33);
-
-  [[10,'Current CGPA',cgpa.toFixed(2),'Equiv: '+pct+'%',[0,229,255]],
-   [75,'Max Achievable',maxCGPA,'Sems Done: '+sgpas.filter(s=>s!==null).length+'/8',[57,211,83]],
-   [140,'Division',cls,'CGPA '+cgpa.toFixed(2),[227,179,65]]
-  ].forEach(([x,lbl,val,sub,col])=>{
-    doc.setFillColor(28,35,51); doc.roundedRect(x,47,60,34,3,3,'F');
-    doc.setTextColor(...col); doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text(lbl,x+4,56);
-    doc.setFontSize(val.length>8?13:20); doc.text(val,x+4,68);
-    doc.setFontSize(8); doc.setTextColor(139,148,158); doc.text(sub,x+4,76);
+  doc.setFontSize(9);doc.setTextColor(139,148,158);
+  doc.text(`${currentUser.name} | ${currentUser.enrollment} | JUET Guna CSE B.Tech`,15,25);
+  doc.text('Generated: '+new Date().toLocaleString('en-IN'),15,33);
+  [[10,'Current CGPA',cgpa.toFixed(2),'Equiv: '+pct+'%',[0,229,255]],[75,'Max Achievable',maxCGPA,'Sems: '+sgpas.filter(s=>s!==null).length+'/8',[57,211,83]],[140,'Division',cls,'CGPA '+cgpa.toFixed(2),[227,179,65]]].forEach(([x,lbl,val,sub,col])=>{
+    doc.setFillColor(28,35,51);doc.roundedRect(x,49,60,34,3,3,'F');
+    doc.setTextColor(...col);doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text(lbl,x+4,58);
+    doc.setFontSize(val.length>8?13:20);doc.text(val,x+4,70);
+    doc.setFontSize(8);doc.setTextColor(139,148,158);doc.text(sub,x+4,78);
   });
-
-  let y=90;
-  const target=parseFloat(document.getElementById('targetCGPA').value);
-  if(!isNaN(target)&&target>0){
-    const rp=target*TOTAL_CREDITS-total;
-    const avgR=remCr>0?rp/remCr:null;
-    doc.setTextColor(0,229,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text('Target Analysis',15,y); y+=7;
-    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(230,237,243);
-    doc.text(`Target: ${target}  |  Avg SGPA needed: ${avgR!==null?avgR.toFixed(2):'—'}  |  Max achievable: ${maxCGPA}`,15,y); y+=5;
+  let y=92;
+  const tgt=parseFloat(document.getElementById('targetCGPA').value);
+  if(!isNaN(tgt)&&tgt>0){
+    const rp=tgt*TOTAL_CREDITS-total,avgR=remCr>0?rp/remCr:null;
+    doc.setTextColor(0,229,255);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text('Target Analysis',15,y);y+=7;
+    doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(230,237,243);
+    doc.text(`Target: ${tgt}  |  Avg SGPA needed: ${avgR!==null?avgR.toFixed(2):'—'}  |  Max: ${maxCGPA}`,15,y);y+=5;
     doc.setTextColor(avgR===null||avgR<=10?57:248,avgR===null||avgR<=10?211:81,avgR===null||avgR<=10?83:73);
-    doc.text('Status: '+(avgR===null||avgR<=10?'ACHIEVABLE':'NOT ACHIEVABLE'),15,y); y+=9;
+    doc.text('Status: '+(avgR===null||avgR<=10?'ACHIEVABLE':'NOT ACHIEVABLE'),15,y);y+=9;
   }
-
-  doc.setTextColor(0,229,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text('Semester-wise Performance',15,y); y+=5;
-  doc.setFillColor(22,27,34); doc.rect(10,y,190,7,'F');
-  doc.setTextColor(139,148,158); doc.setFontSize(8); doc.setFont('helvetica','bold');
-  ['Semester','Credits','SGPA','Grade Points','Equiv %','Grade'].forEach((h,i)=>doc.text(h,12+i*31,y+5));
-  y+=8;
+  doc.setTextColor(0,229,255);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text('Semester-wise Performance',15,y);y+=5;
+  doc.setFillColor(22,27,34);doc.rect(10,y,190,7,'F');
+  doc.setTextColor(139,148,158);doc.setFontSize(8);doc.setFont('helvetica','bold');
+  ['Semester','Credits','SGPA','Grade Points','Equiv %','Grade'].forEach((h,i)=>doc.text(h,12+i*31,y+5));y+=8;
   sgpas.forEach((s,idx)=>{
     if(idx%2===0){doc.setFillColor(28,35,51);doc.rect(10,y-1,190,7,'F');}
-    doc.setTextColor(230,237,243); doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    [`Semester ${idx+1}`,`${SEM_CREDITS[idx]}`,s!==null?s.toFixed(2):'—',
-     s!==null?(s*SEM_CREDITS[idx]).toFixed(2):'—',s!==null?(s*10).toFixed(1)+'%':'—',
-     s!==null?getGradeLetter(s):'Pending'].forEach((v,j)=>doc.text(v,12+j*31,y+5));
-    y+=8;
+    doc.setTextColor(230,237,243);doc.setFont('helvetica','normal');doc.setFontSize(8);
+    [`Semester ${idx+1}`,`${SEM_CREDITS[idx]}`,s!==null?s.toFixed(2):'—',s!==null?(s*SEM_CREDITS[idx]).toFixed(2):'—',s!==null?(s*10).toFixed(1)+'%':'—',s!==null?getGradeLetter(s):'Pending'].forEach((v,j)=>doc.text(v,12+j*31,y+5));y+=8;
   });
-
-  doc.setTextColor(72,79,88); doc.setFontSize(8);
+  doc.setTextColor(72,79,88);doc.setFontSize(8);
   doc.text('CGPA Planner Pro | JUET Guna CSE B.Tech | Total Credits: 160',15,288);
-  doc.save('CGPA_Report_JUET_'+new Date().toISOString().slice(0,10)+'.pdf');
+  doc.save(`CGPA_${currentUser.username}_${new Date().toISOString().slice(0,10)}.pdf`);
+  logActivity('PDF exported');
 }
 
-// =====================================================================
-// REFERENCE TAB — full credit table
-// =====================================================================
+// ═══════════════════════════════════════════════
+// REFERENCE
+// ═══════════════════════════════════════════════
 function buildFullCreditTable(){
-  const tb = document.getElementById('full-credit-tbody');
-  if(!tb) return;
-  let rows = '';
-  CURRICULUM.forEach(sem => {
-    sem.subjects.forEach((s,i) => {
-      rows += `<tr>
-        ${i===0 ? `<td rowspan="${sem.subjects.length}" style="color:var(--cyan);font-weight:700;vertical-align:top;padding-top:10px">S${sem.sem}</td>` : ''}
-        <td style="color:var(--text-dim);font-size:11px">${s.code}</td>
-        <td style="color:var(--text-muted)">${s.name}</td>
-        <td style="color:var(--cyan);font-weight:700;text-align:center">${s.credits}</td>
-        <td><span class="rank-badge ${s.credits>=4?'rank-O':s.credits>=3?'rank-A':s.credits>=2?'rank-B':'rank-C'}">${s.credits>=4?'Core':s.credits>=3?'Theory':'Lab'}</span></td>
-      </tr>`;
+  const tb=document.getElementById('full-credit-tbody');if(!tb)return;
+  let rows='';
+  CURRICULUM.forEach(sem=>{
+    sem.subjects.forEach((s,i)=>{
+      rows+=`<tr>${i===0?`<td rowspan="${sem.subjects.length}" style="color:var(--cyan);font-weight:700;vertical-align:top;padding-top:10px">S${sem.sem}</td>`:''}<td style="color:var(--text-dim);font-size:11px">${s.code}</td><td style="color:var(--text-muted)">${s.name}</td><td style="color:var(--cyan);font-weight:700;text-align:center">${s.credits}</td></tr>`;
     });
-    rows += `<tr><td colspan="5" style="border-bottom:2px solid var(--border);padding:2px 12px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">
-      Total counted credits: ${sem.credits}
-    </td></tr>`;
+    rows+=`<tr><td colspan="4" style="border-bottom:2px solid var(--border);padding:2px 12px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">Sem ${sem.sem} total: ${sem.credits} credits</td></tr>`;
   });
-  tb.innerHTML = rows;
+  tb.innerHTML=rows;
 }
-
 function updateRefTab(cgpa){
-  document.getElementById('cgpa-pct-live').innerHTML =
-    `Your CGPA <span style="color:var(--cyan);font-weight:700">${cgpa.toFixed(2)}</span> = <span style="color:var(--green);font-weight:700">${(cgpa*10).toFixed(2)}%</span>`;
+  const el=document.getElementById('cgpa-pct-live');
+  if(el) el.innerHTML=`Your CGPA <span style="color:var(--cyan);font-weight:700">${cgpa.toFixed(2)}</span> = <span style="color:var(--green);font-weight:700">${(cgpa*10).toFixed(2)}%</span>`;
 }
 
-// =====================================================================
+// ═══════════════════════════════════════════════
 // HELPERS
-// =====================================================================
-function cgpaColor(v){ return v>=9?'good':v>=7?'':v>=5.5?'warn':'bad'; }
+// ═══════════════════════════════════════════════
+function cgpaColor(v){return v>=9?'good':v>=7?'':v>=5.5?'warn':'bad';}
 function getCGPARank(c){
-  if(c>=9) return {rank:'rank-O',cls:'Outstanding'};
-  if(c>=8) return {rank:'rank-O',cls:'Excellent'};
-  if(c>=7) return {rank:'rank-A',cls:'Very Good'};
-  if(c>=6) return {rank:'rank-A',cls:'Good'};
-  if(c>=5) return {rank:'rank-B',cls:'Average'};
-  return {rank:'rank-C',cls:'Below Par'};
+  if(c>=9)return{rank:'rank-O',cls:'Outstanding'};if(c>=8)return{rank:'rank-O',cls:'Excellent'};
+  if(c>=7)return{rank:'rank-A',cls:'Very Good'};if(c>=6)return{rank:'rank-A',cls:'Good'};
+  if(c>=5)return{rank:'rank-B',cls:'Average'};return{rank:'rank-C',cls:'Below Par'};
 }
 function getGradeLetter(s){
   if(s>=9.5)return'O';if(s>=8.5)return'A+';if(s>=7.5)return'A';
-  if(s>=6.5)return'B+';if(s>=5.5)return'B';if(s>=4.5)return'C';
-  if(s>=4.0)return'P';return'F';
+  if(s>=6.5)return'B+';if(s>=5.5)return'B';if(s>=4.5)return'C';if(s>=4)return'P';return'F';
 }
 
-// =====================================================================
+// ═══════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════
+function showToast(msg,type='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=`toast show ${type}`;
+  setTimeout(()=>t.className='toast',3000);
+}
+function toggleProfileDropdown(){document.getElementById('profileDropdown').classList.toggle('open');}
+function closeDropdown(){document.getElementById('profileDropdown').classList.remove('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.user-pill')&&!e.target.closest('.profile-dropdown')) closeDropdown();});
+function openChangePassword(){document.getElementById('cp-old').value='';document.getElementById('cp-new').value='';document.getElementById('cp-err').classList.remove('show');document.getElementById('modal-chpass').classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function confirmReset(){document.getElementById('modal-reset').classList.add('open');}
+function confirmDeleteAccount(){document.getElementById('del-confirm').value='';document.getElementById('modal-delaccount').classList.add('open');}
+
+function doReset(){
+  closeModal('modal-reset');
+  quickSGPA=Array(8).fill('');semData=freshSemData();scenarios=[];
+  document.getElementById('targetCGPA').value='';targetCGPA='';
+  document.getElementById('resultsSection').style.display='none';
+  ['sc-cgpa','sc-best','sc-rank'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('sc-done').textContent='0';
+  document.getElementById('sc-rank-sub').textContent='Enter data first';
+  buildSemGrid();scheduleSave();
+  showToast('↺ Data reset.','info');
+}
+
+// ═══════════════════════════════════════════════
 // TABS
-// =====================================================================
+// ═══════════════════════════════════════════════
 function switchTab(name){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
-  const idx={entry:0,analysis:1,whatif:2,reference:3}[name];
+  const idx={entry:0,analysis:1,whatif:2,reference:3,profile:4}[name];
   document.querySelectorAll('.tab-btn')[idx].classList.add('active');
   if(name==='analysis') liveUpdate();
-  if(name==='whatif')   renderScenarios();
-  if(name==='reference'){
-    buildFullCreditTable();
-    const sg=getSGPAs(); let t=0,c=0;
-    sg.forEach((s,i)=>{if(s!==null){t+=s*SEM_CREDITS[i];c+=SEM_CREDITS[i];}});
-    if(c>0) updateRefTab(t/c);
+  if(name==='whatif') renderScenarios();
+  if(name==='reference'){buildFullCreditTable();const sg=getSGPAs();let t=0,c=0;sg.forEach((s,i)=>{if(s!==null){t+=s*SEM_CREDITS[i];c+=SEM_CREDITS[i];}});if(c>0)updateRefTab(t/c);}
+  if(name==='profile') loadActivityLog();
+}
+
+// Enter key on auth forms
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('auth-login').style.display!=='none') doLogin();
+    else if(document.getElementById('auth-register').style.display!=='none') doRegister();
   }
-}
-
-// =====================================================================
-// RESET
-// =====================================================================
-function resetAll(){
-  if(!confirm('Reset all data?')) return;
-  quickSGPA = Array(8).fill('');
-  semData   = CURRICULUM.map(sem => ({
-    subjects: sem.subjects.map(s => ({code:s.code, name:s.name, credits:String(s.credits), grade:''}))
-  }));
-  scenarios = [];
-  ['targetCGPA','simSGPA'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('resultsSection').style.display='none';
-  document.getElementById('sc-cgpa').textContent='—';
-  document.getElementById('sc-done').textContent='0';
-  document.getElementById('sc-best').textContent='—';
-  document.getElementById('sc-rank').textContent='–';
-  document.getElementById('sc-rank-sub').textContent='Enter data first';
-  buildSemGrid();
-}
-
-// =====================================================================
-// INIT
-// =====================================================================
-buildSemGrid();
+});
 </script>
 </body>
 </html>
