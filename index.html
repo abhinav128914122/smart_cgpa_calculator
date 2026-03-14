@@ -249,6 +249,48 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .toast.error{border-color:rgba(248,81,73,.4);color:var(--red);}
 .toast.info{border-color:rgba(0,229,255,.3);color:var(--cyan);}
 
+/* DIFFICULTY */
+.difficulty-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+@media(max-width:600px){.difficulty-grid{grid-template-columns:1fr;}}
+.diff-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+.diff-card:hover{transform:translateY(-2px);}
+.diff-card.easy{border-color:rgba(57,211,83,.3);}
+.diff-card.medium{border-color:rgba(227,179,65,.3);}
+.diff-card.hard{border-color:rgba(248,81,73,.3);}
+.diff-card.extreme{border-color:rgba(163,113,247,.4);}
+.diff-sem-title{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px;}
+.diff-rating{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.diff-stars{font-size:14px;letter-spacing:2px;}
+.diff-label{font-size:12px;font-weight:700;font-family:var(--font-mono);}
+.diff-label.easy{color:var(--green);}.diff-label.medium{color:var(--amber);}.diff-label.hard{color:var(--red);}.diff-label.extreme{color:var(--purple);}
+.diff-bar-wrap{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+.diff-bar{height:100%;border-radius:3px;transition:width 1s ease;}
+.diff-bar.easy{background:var(--green);}.diff-bar.medium{background:var(--amber);}.diff-bar.hard{background:var(--red);}.diff-bar.extreme{background:var(--purple);}
+.diff-meta{font-size:11px;color:var(--text-dim);line-height:1.5;}
+.diff-sgpa-badge{display:inline-block;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--cyan);margin-top:4px;}
+.diff-sgpa-badge.no-data{color:var(--text-dim);}
+.diff-tip-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.diff-tip-title{font-size:12px;font-weight:700;color:var(--cyan);font-family:var(--font-mono);margin-bottom:8px;}
+.diff-tip-list{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.diff-tip-list li{font-size:12px;color:var(--text-muted);padding-left:16px;position:relative;line-height:1.5;}
+.diff-tip-list li::before{content:'→';position:absolute;left:0;color:var(--cyan);}
+.diff-overall{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.2);border-radius:var(--radius);padding:16px;text-align:center;margin-bottom:16px;}
+.diff-overall-label{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.diff-overall-val{font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--cyan);}
+/* LEADERBOARD */
+.lb-opt-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:4px;}
+.lb-toggle-wrap{display:flex;align-items:center;gap:10px;}
+.lb-table{width:100%;border-collapse:collapse;}
+.lb-table th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--font-mono);letter-spacing:1px;color:var(--text-muted);border-bottom:1px solid var(--border);text-transform:uppercase;}
+.lb-table td{padding:10px 12px;border-bottom:1px solid rgba(48,54,61,.4);font-size:13px;}
+.lb-table tr:hover td{background:var(--surface2);}
+.lb-rank{font-family:var(--font-mono);font-weight:700;font-size:14px;color:var(--text-dim);}
+.lb-rank.gold{color:#FFD700;}.lb-rank.silver{color:#C0C0C0;}.lb-rank.bronze{color:#CD7F32;}
+.lb-cgpa{font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--cyan);}
+.lb-me{background:rgba(0,229,255,.05)!important;}
+.lb-me td{border-color:rgba(0,229,255,.2)!important;}
+.lb-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-family:var(--font-mono);font-weight:700;background:rgba(0,229,255,.15);color:var(--cyan);border:1px solid rgba(0,229,255,.3);margin-left:6px;}
+/* MISC */
 .divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
 .empty-state{text-align:center;padding:30px;color:var(--text-dim);font-size:13px;}
 .empty-state span{font-size:32px;display:block;margin-bottom:8px;}
@@ -343,6 +385,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <button class="tab-btn active" onclick="switchTab('entry')">📝 Grades</button>
       <button class="tab-btn" onclick="switchTab('analysis')">📊 Analysis</button>
       <button class="tab-btn" onclick="switchTab('whatif')">🔮 What-If</button>
+      <button class="tab-btn" onclick="switchTab('difficulty')">🔥 Difficulty</button>
+      <button class="tab-btn" onclick="switchTab('leaderboard')">🏆 Leaderboard</button>
       <button class="tab-btn" onclick="switchTab('reference')">📖 Reference</button>
       <button class="tab-btn" onclick="switchTab('profile')">👤 Profile</button>
     </div>
@@ -429,6 +473,41 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
+    <!-- DIFFICULTY TAB -->
+    <div class="tab-panel" id="tab-difficulty">
+      <div class="result-box" style="margin-bottom:20px;">
+        <div class="controls-title">🔥 Semester Difficulty Predictor</div>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:18px;line-height:1.6;">
+          Based on credit load, subject complexity, and your actual SGPA trend, each semester is rated for difficulty. Enter SGPA data first to get personalised predictions.
+        </p>
+        <div id="difficulty-grid" class="difficulty-grid"></div>
+        <div id="difficulty-tips" style="margin-top:20px;"></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD TAB -->
+    <div class="tab-panel" id="tab-leaderboard">
+      <div class="result-box" style="margin-bottom:16px;">
+        <div class="controls-title">🏆 Anonymous CGPA Leaderboard</div>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;line-height:1.6;">
+          Compare your CGPA with other JUET CSE students — completely anonymous. No names or emails are ever shared. Only your CGPA and semester count appear.
+        </p>
+        <div class="lb-opt-row">
+          <div style="font-size:13px;color:var(--text-muted);">Your entry on the leaderboard:</div>
+          <div class="lb-toggle-wrap">
+            <span id="lb-status-text" style="font-size:12px;font-family:var(--font-mono);color:var(--text-dim);">Not participating</span>
+            <button class="btn btn-secondary" id="lb-join-btn" onclick="toggleLeaderboard()">Join Leaderboard</button>
+          </div>
+        </div>
+        <hr class="divider"/>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:11px;font-family:var(--font-mono);color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;">Live Rankings</div>
+          <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;" onclick="loadLeaderboard()">↺ Refresh</button>
+        </div>
+        <div id="leaderboard-list"></div>
+      </div>
+    </div>
+
     <!-- REFERENCE TAB -->
     <div class="tab-panel" id="tab-reference">
       <div class="result-box">
@@ -486,6 +565,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
   </div>
   <div class="footer">CGPA Planner Pro · JUET Guna · CSE B.Tech · 160 Credits · Powered by Firebase 🔥</div>
+  <div style="text-align:center;font-size:10px;color:var(--text-dim);font-family:var(--font-mono);margin-top:4px;padding-bottom:20px;">Leaderboard entries are 100% anonymous — no personal data is ever stored or shared</div>
 </div>
 
 <!-- MODALS -->
@@ -1107,6 +1187,7 @@ function calculate(){
   drawCharts(sgpas, cgpa, completed);
   buildInsights(sgpas, cgpa, completed, valids);
   updateProfileStats(cgpa, cSum, valids, best, bestIdx, cr);
+  maybeUpdateLeaderboard(cgpa, completed);
   var pl = document.getElementById('cgpa-pct-live');
   if(pl) pl.innerHTML = 'Your CGPA <span style="color:var(--cyan);font-weight:700">'+cgpa.toFixed(2)+'</span> = <span style="color:var(--green);font-weight:700">'+(cgpa*10).toFixed(2)+'%</span>';
 }
@@ -1355,12 +1436,14 @@ function switchTab(name){
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
   document.getElementById('tab-'+name).classList.add('active');
-  var idx={entry:0,analysis:1,whatif:2,reference:3,profile:4}[name];
+  var idx={entry:0,analysis:1,whatif:2,difficulty:3,leaderboard:4,reference:5,profile:6}[name];
   document.querySelectorAll('.tab-btn')[idx].classList.add('active');
-  if(name==='analysis') liveUpdate();
-  if(name==='whatif')   renderScenarios();
-  if(name==='reference') buildFullCreditTable();
-  if(name==='profile')   loadActivityLog();
+  if(name==='analysis')    liveUpdate();
+  if(name==='whatif')      renderScenarios();
+  if(name==='difficulty')  buildDifficultyPredictor();
+  if(name==='leaderboard') loadLeaderboard();
+  if(name==='reference')   buildFullCreditTable();
+  if(name==='profile')     loadActivityLog();
 }
 
 document.addEventListener('keydown',function(e){
@@ -1384,6 +1467,273 @@ function getCGPARank(c){
 function getGradeLetter(s){
   if(s>=9.5)return'O';if(s>=8.5)return'A+';if(s>=7.5)return'A';
   if(s>=6.5)return'B+';if(s>=5.5)return'B';if(s>=4.5)return'C';if(s>=4)return'P';return'F';
+}
+
+// ═══════════════════════════════════════════════
+// 🔥 SEMESTER DIFFICULTY PREDICTOR
+// ═══════════════════════════════════════════════
+
+// Base difficulty score per semester (0-100) derived from:
+// credit load, subject complexity (core theory heavy = harder), project weight
+var SEM_BASE_DIFFICULTY = [
+  {score:55, reason:'High credit load (19.5), first semester adjustment, Physics + Maths together'},
+  {score:60, reason:'Heavy credit load (22.5), OOP introduces programming paradigm shift'},
+  {score:72, reason:'Data Structures + Digital Systems + DBMS simultaneously — classically tough'},
+  {score:80, reason:'Algorithms + COA + ML together — most students report this as the hardest theory semester'},
+  {score:78, reason:'TOC + Probability theory + Minor Project — abstract subjects peak here'},
+  {score:65, reason:'OS + Compiler Design — complex but fewer subjects overall'},
+  {score:50, reason:'Elective-heavy + Major Project Part-I — more self-directed work'},
+  {score:45, reason:'Major Project dominates — difficulty depends on project complexity'}
+];
+
+var DIFFICULTY_TIPS = [
+  // Sem 1
+  ['Focus on building a strong Maths foundation — it carries through all 8 semesters',
+   'Physics-1 and Maths overlap in calculus topics — study them together',
+   'Start coding daily from week 1, even simple programs build muscle memory',
+   'Workshop attendance is mandatory — don\'t skip it'],
+  // Sem 2
+  ['OOP concepts like inheritance and polymorphism need practice, not just theory',
+   'Discrete Maths is the backbone of CS theory — take it seriously',
+   'Electrical Science surprises many CSE students — start early',
+   'Engineering Drawing Lab is time-consuming — allocate extra hours'],
+  // Sem 3
+  ['Data Structures is the most important subject of your degree — master it',
+   'Implement every DS from scratch: arrays, linked lists, trees, graphs',
+   'Digital Systems requires understanding from gates to flip-flops — use logic simulators',
+   'DBMS SQL practice is best done daily on a local MySQL instance'],
+  // Sem 4
+  ['Algorithms: focus on time complexity analysis, not just code',
+   'COA is dense — make diagrams for CPU pipeline and memory hierarchy',
+   'Machine Learning in Sem 4 is introductory — build intuition, not just formulas',
+   'Start Minor Project-related skills: web dev, Android, or ML projects'],
+  // Sem 5
+  ['Theory of Computation (TOC) is abstract — practice DFA/NFA conversions daily',
+   'Probability Theory: bridge it to ML applications to stay motivated',
+   'Minor Project-1: choose a realistic scope — overambitious projects hurt grades',
+   'Computer Networks: understand the TCP/IP model layer by layer'],
+  // Sem 6
+  ['OS internals (scheduling, paging, deadlock) — draw diagrams for every algorithm',
+   'Compiler Design: implement a mini-lexer/parser to understand it deeply',
+   'Minor Project-2: present weekly progress to yourself to stay on track',
+   'Sem 6 is relatively lighter — use it to build your GitHub portfolio'],
+  // Sem 7
+  ['Major Project Part-I: finalize tech stack by week 2 — don\'t waste time deciding',
+   'Electives: pick subjects aligned with your career goal (AI, security, cloud)',
+   'Start internship applications during this semester if not done already',
+   'Document your project progress weekly — it helps enormously in viva'],
+  // Sem 8
+  ['Major Project Part-II: demo-ready build 4 weeks before submission',
+   'Viva preparation: know every line of your project and be ready for deep questions',
+   'Keep your CGPA trend strong — last semester affects final division',
+   'Elective selection: pick what you genuinely understand, not what looks impressive']
+];
+
+function getDifficultyLevel(score){
+  if(score>=80) return{cls:'extreme',label:'Very Hard',stars:'★★★★★',pct:score};
+  if(score>=65) return{cls:'hard',label:'Hard',stars:'★★★★☆',pct:score};
+  if(score>=50) return{cls:'medium',label:'Moderate',stars:'★★★☆☆',pct:score};
+  return{cls:'easy',label:'Manageable',stars:'★★☆☆☆',pct:score};
+}
+
+function buildDifficultyPredictor(){
+  var sgpas = getSGPAs();
+  var grid  = document.getElementById('difficulty-grid');
+  var tips  = document.getElementById('difficulty-tips');
+  if(!grid||!tips) return;
+
+  // Adjust base difficulty using actual SGPA performance
+  var adjustedScores = SEM_BASE_DIFFICULTY.map(function(base, i){
+    var score = base.score;
+    var sg    = sgpas[i];
+    if(sg !== null){
+      // If student scored high despite hard sem, mark it easier for them personally
+      if(sg >= 9)  score = Math.max(score - 18, 20);
+      else if(sg >= 8) score = Math.max(score - 10, 25);
+      else if(sg >= 7) score = score; // as-is
+      else if(sg >= 6) score = Math.min(score + 8, 98);
+      else             score = Math.min(score + 18, 98);
+    }
+    // Add credit load factor
+    var creditFactor = (SEM_CREDITS[i] - 16) * 0.8;
+    score = Math.min(Math.max(score + creditFactor, 10), 98);
+    return Math.round(score);
+  });
+
+  // Identify the single hardest upcoming semester
+  var hardestUpcoming = -1, hardestScore = 0;
+  sgpas.forEach(function(s,i){
+    if(s===null && adjustedScores[i]>hardestScore){ hardestScore=adjustedScores[i]; hardestUpcoming=i; }
+  });
+
+  // Build cards
+  var html = '';
+  adjustedScores.forEach(function(score, i){
+    var d   = getDifficultyLevel(score);
+    var sg  = sgpas[i];
+    var done = sg !== null;
+    html += '<div class="diff-card '+d.cls+'">' +
+      '<div class="diff-sem-title">SEMESTER '+(i+1)+' &nbsp;·&nbsp; '+SEM_CREDITS[i]+' credits</div>' +
+      '<div class="diff-rating">' +
+        '<span class="diff-stars">'+d.stars+'</span>' +
+        '<span class="diff-label '+d.cls+'">'+d.label+'</span>' +
+        (hardestUpcoming===i ? '<span style="font-size:10px;color:var(--red);font-family:var(--font-mono);margin-left:auto;">⚠ NEXT HARD SEM</span>' : '') +
+      '</div>' +
+      '<div class="diff-bar-wrap"><div class="diff-bar '+d.cls+'" style="width:'+d.pct+'%"></div></div>' +
+      '<div class="diff-meta">'+SEM_BASE_DIFFICULTY[i].reason+'</div>' +
+      '<div class="diff-sgpa-badge '+(done?'':'no-data')+'">' +
+        (done ? 'Your SGPA: '+sg.toFixed(2) : 'Not attempted yet') +
+      '</div>' +
+    '</div>';
+  });
+  grid.innerHTML = html;
+
+  // Overall difficulty summary
+  var attempted  = sgpas.filter(function(s){return s!==null;});
+  var avgBase    = SEM_BASE_DIFFICULTY.reduce(function(a,b){return a+b.score;},0)/8;
+  var summaryHTML = '<div class="diff-overall">' +
+    '<div class="diff-overall-label">Overall Curriculum Difficulty Index</div>' +
+    '<div class="diff-overall-val">'+Math.round(avgBase)+' / 100</div>' +
+    '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Semesters 4 and 5 are historically the most challenging</div>' +
+  '</div>';
+
+  // Tips for hardest upcoming semester or current semester
+  var tipIdx = hardestUpcoming !== -1 ? hardestUpcoming : (attempted.length > 0 ? attempted.length - 1 : 0);
+  var tipsHTML = '<div class="diff-tip-card">' +
+    '<div class="diff-tip-title">💡 Study Tips — Semester '+(tipIdx+1)+' ('+(hardestUpcoming!==-1?'Upcoming':'Most Recent')+')</div>' +
+    '<ul class="diff-tip-list">' +
+    DIFFICULTY_TIPS[tipIdx].map(function(t){return '<li>'+t+'</li>';}).join('') +
+    '</ul></div>';
+
+  tips.innerHTML = summaryHTML + tipsHTML;
+}
+
+// ═══════════════════════════════════════════════
+// 🏆 ANONYMOUS CGPA LEADERBOARD
+// ═══════════════════════════════════════════════
+var lbParticipating = false;
+
+function loadLeaderboard(){
+  if(!currentUser) return;
+  var list = document.getElementById('leaderboard-list');
+  list.innerHTML = '<div class="empty-state"><span style="font-size:20px;display:block;margin-bottom:8px">⏳</span>Loading rankings...</div>';
+
+  // Check if current user is participating
+  db.collection('leaderboard').doc(currentUser.uid).get()
+    .then(function(snap){
+      lbParticipating = snap.exists;
+      updateLbJoinBtn();
+      // Load all entries
+      return db.collection('leaderboard').orderBy('cgpa','desc').limit(50).get();
+    })
+    .then(function(snap){
+      if(snap.empty){
+        list.innerHTML='<div class="empty-state"><span>🏆</span>No entries yet. Be the first to join!</div>';
+        return;
+      }
+      var rows = '';
+      var myRank = -1;
+      snap.docs.forEach(function(doc, idx){
+        var d      = doc.data();
+        var rank   = idx + 1;
+        var isMe   = doc.id === currentUser.uid;
+        if(isMe) myRank = rank;
+        var rankCls = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+        var rankMedal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'#'+rank;
+        var cr = getCGPARank(d.cgpa);
+        rows += '<tr class="'+(isMe?'lb-me':'')+'">' +
+          '<td><span class="lb-rank '+rankCls+'">'+rankMedal+'</span></td>' +
+          '<td>' +
+            '<span style="font-size:12px;color:var(--text-dim);font-family:var(--font-mono);">'+d.alias+'</span>' +
+            (isMe ? '<span class="lb-badge">YOU</span>' : '') +
+          '</td>' +
+          '<td><span class="lb-cgpa">'+d.cgpa.toFixed(2)+'</span></td>' +
+          '<td><span class="rank-badge '+cr.rank+'" style="font-size:10px;">'+cr.cls+'</span></td>' +
+          '<td style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">'+d.semsCompleted+' sems</td>' +
+          '<td style="font-size:11px;color:var(--text-dim);">'+(d.pct?d.pct+'%':'–')+'</td>' +
+        '</tr>';
+      });
+
+      list.innerHTML =
+        '<table class="lb-table">' +
+          '<thead><tr>' +
+            '<th>Rank</th><th>Alias</th><th>CGPA</th><th>Division</th><th>Progress</th><th>Equiv %</th>' +
+          '</tr></thead>' +
+          '<tbody>'+rows+'</tbody>' +
+        '</table>' +
+        (myRank > 0 ? '<div style="text-align:center;font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-top:12px;">You are ranked <strong style=\'color:var(--cyan)\'>#'+myRank+'</strong> out of '+snap.size+' students</div>' : '') +
+        '<div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:8px;">🔒 All entries are anonymous — no personal information is shared</div>';
+    })
+    .catch(function(e){
+      list.innerHTML='<div class="empty-state"><span>⚠️</span>Could not load leaderboard. Try again.</div>';
+    });
+}
+
+function toggleLeaderboard(){
+  if(!currentUser){ showToast('Please sign in first','error'); return; }
+  if(lbParticipating){
+    // Remove from leaderboard
+    db.collection('leaderboard').doc(currentUser.uid).delete()
+      .then(function(){
+        lbParticipating = false;
+        updateLbJoinBtn();
+        showToast('Removed from leaderboard','info');
+        loadLeaderboard();
+      });
+  } else {
+    // Add to leaderboard — compute CGPA
+    var sgpas = getSGPAs();
+    var total=0, cSum=0, completed=0;
+    sgpas.forEach(function(s,i){if(s!==null){total+=s*SEM_CREDITS[i];cSum+=SEM_CREDITS[i];completed++;}});
+    if(cSum===0){ showToast('Enter your CGPA data first before joining!','error'); return; }
+    var cgpa = total/cSum;
+    var pct  = parseFloat((cgpa*10).toFixed(1));
+    // Generate a random alias — no name stored
+    var adjectives = ['Swift','Bright','Quiet','Bold','Sharp','Calm','Keen','Agile','Brave','Clear'];
+    var nouns      = ['Coder','Nerd','Dev','Stack','Node','Loop','Array','Query','Byte','Cache'];
+    var alias = adjectives[Math.floor(Math.random()*adjectives.length)] + nouns[Math.floor(Math.random()*nouns.length)] + Math.floor(Math.random()*90+10);
+    db.collection('leaderboard').doc(currentUser.uid).set({
+      alias:        alias,
+      cgpa:         parseFloat(cgpa.toFixed(2)),
+      pct:          pct,
+      semsCompleted:completed,
+      updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      lbParticipating = true;
+      updateLbJoinBtn();
+      showToast('🏆 Joined as "'+alias+'" — you\'re on the board!','success');
+      logActivity('Joined leaderboard as '+alias);
+      loadLeaderboard();
+    }).catch(function(e){ showToast('Failed to join: '+e.message,'error'); });
+  }
+}
+
+function updateLbJoinBtn(){
+  var btn  = document.getElementById('lb-join-btn');
+  var txt  = document.getElementById('lb-status-text');
+  if(!btn||!txt) return;
+  if(lbParticipating){
+    btn.textContent = 'Leave Leaderboard';
+    btn.className   = 'btn btn-ghost';
+    txt.textContent = '✅ You are participating';
+    txt.style.color = 'var(--green)';
+  } else {
+    btn.textContent = 'Join Leaderboard';
+    btn.className   = 'btn btn-secondary';
+    txt.textContent = 'Not participating';
+    txt.style.color = 'var(--text-dim)';
+  }
+}
+
+// Auto-update leaderboard entry whenever CGPA recalculates (if participating)
+function maybeUpdateLeaderboard(cgpa, completed){
+  if(!lbParticipating || !currentUser) return;
+  db.collection('leaderboard').doc(currentUser.uid).update({
+    cgpa:          parseFloat(cgpa.toFixed(2)),
+    pct:           parseFloat((cgpa*10).toFixed(1)),
+    semsCompleted: completed,
+    updatedAt:     firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(){});
 }
 </script>
 </body>
